@@ -38,19 +38,22 @@ void PickupHandler::handle(const udp::endpoint& from, std::span<const uint8_t> p
         return;
     }
 
-    // Distance check.
+    // Distance check: player to prop. Until the first PROP_STATE the prop position is unknown
+    // (the manifest carries none) and the pickup is allowed.
     const auto player_pos = player_state_.get(*sender_id);
     if (!player_pos.has_value()) {
         logger_->warn("[Pickup] from=" + *sender_id + " prop=" + std::to_string(prop_id) + " no position");
         return;
     }
-    const float dx = player_pos->position[0];
-    const float dy = player_pos->position[1];
-    const float dz = player_pos->position[2];
-    const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
-    if (dist > kPickupDistance) {
-        logger_->info("[Pickup] from=" + *sender_id + " prop=" + std::to_string(prop_id) + " too far dist=" + std::to_string(dist));
-        return;
+    if (prop->has_position) {
+        const float dx = player_pos->position[0] - prop->position[0];
+        const float dy = player_pos->position[1] - prop->position[1];
+        const float dz = player_pos->position[2] - prop->position[2];
+        const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist > kPickupDistance) {
+            logger_->info("[Pickup] from=" + *sender_id + " prop=" + std::to_string(prop_id) + " too far dist=" + std::to_string(dist));
+            return;
+        }
     }
 
     if (!props_.try_grant(prop_id, *sender_id)) {

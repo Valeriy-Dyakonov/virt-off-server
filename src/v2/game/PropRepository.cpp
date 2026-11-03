@@ -4,12 +4,15 @@
 
 namespace v2::game {
 
-void PropRepository::register_manifest(const std::vector<PropDescriptor>& descriptors) {
+std::vector<uint32_t> PropRepository::register_manifest(const std::vector<PropDescriptor>& descriptors) {
+    std::vector<uint32_t> ids;
+    ids.reserve(descriptors.size());
     for (const auto& desc : descriptors) {
-        // First manifest wins — skip existing keys.
+        // First manifest wins — an existing key keeps its id.
         const auto it = std::find_if(records_.begin(), records_.end(),
                                      [&](const PropRecord& r) { return r.key == desc.key; });
         if (it != records_.end()) {
+            ids.push_back(it->prop_id);
             continue;
         }
 
@@ -18,8 +21,10 @@ void PropRepository::register_manifest(const std::vector<PropDescriptor>& descri
         rec.key = desc.key;
         rec.owner_id.clear();
         rec.held = false;
+        ids.push_back(rec.prop_id);
         records_.push_back(std::move(rec));
     }
+    return ids;
 }
 
 bool PropRepository::try_grant(uint32_t prop_id, const std::string& holder_id) {
@@ -46,13 +51,25 @@ std::optional<PropRecord> PropRepository::release(uint32_t prop_id) {
     return before;
 }
 
-void PropRepository::release_all_of(const std::string& owner_id) {
+std::vector<uint32_t> PropRepository::release_all_of(const std::string& owner_id) {
+    std::vector<uint32_t> released;
     for (auto& rec : records_) {
         if (rec.owner_id == owner_id) {
             rec.owner_id.clear();
             rec.held = false;
+            released.push_back(rec.prop_id);
         }
     }
+    return released;
+}
+
+void PropRepository::update_position(uint32_t prop_id, const std::array<float, 3>& position) {
+    if (prop_id == 0 || prop_id > records_.size()) {
+        return;
+    }
+    auto& rec = records_[prop_id - 1];
+    std::copy(position.begin(), position.end(), rec.position);
+    rec.has_position = true;
 }
 
 std::optional<PropRecord> PropRepository::get(uint32_t prop_id) const {

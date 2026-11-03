@@ -69,15 +69,14 @@ void ManifestHandler::handle(const udp::endpoint& from, std::span<const uint8_t>
                   " parsed=" + std::to_string(descriptors.size()) + " offset_end=" + std::to_string(offset) +
                   " payload_size=" + std::to_string(payload.size()));
 
-    props_.register_manifest(descriptors);
+    const auto prop_ids = props_.register_manifest(descriptors);
 
-    // Build MANIFEST_ACK: [count:2][propId:4 * count]
-    const size_t ack_size = kU16Bytes + count * kU32Bytes;
-    std::vector<uint8_t> ack(ack_size);
-    std::memcpy(ack.data(), &count, kU16Bytes);
-    for (uint16_t i = 0; i < count; ++i) {
-        const uint32_t prop_id = static_cast<uint32_t>(i + 1);
-        std::memcpy(ack.data() + kU16Bytes + i * kU32Bytes, &prop_id, kU32Bytes);
+    // Build MANIFEST_ACK: [count:2][propId:4 * count] — ids follow this client's manifest order.
+    const auto ack_count = static_cast<uint16_t>(prop_ids.size());
+    std::vector<uint8_t> ack(kU16Bytes + ack_count * kU32Bytes);
+    std::memcpy(ack.data(), &ack_count, kU16Bytes);
+    for (uint16_t i = 0; i < ack_count; ++i) {
+        std::memcpy(ack.data() + kU16Bytes + i * kU32Bytes, &prop_ids[i], kU32Bytes);
     }
 
     broadcast_.send_to(*sender_id, protocol::MSG_MANIFEST_ACK, ack);

@@ -6,10 +6,12 @@
 #include "v2/game/IManifestHandler.hpp"
 #include "v2/game/IPickupHandler.hpp"
 #include "v2/game/IPlayerState.hpp"
+#include "v2/game/IPositionReader.hpp"
 #include "v2/game/IPropRepository.hpp"
 #include "v2/game/IPropStateHandler.hpp"
 #include "v2/game/IReleaseHandler.hpp"
 #include "v2/game/ISessionMonitor.hpp"
+#include "v2/game/ISessionTerminator.hpp"
 
 #include <memory>
 
@@ -37,6 +39,8 @@ public:
     IReleaseHandler& release_handler();
     IPropStateHandler& prop_state_handler();
     IAttackHandler& attack_handler();
+    ISessionTerminator& session_terminator();
+    IPositionReader& position_reader();
 
     // -- Builder --
 
@@ -52,6 +56,8 @@ public:
         Builder& with_release_handler(std::unique_ptr<IReleaseHandler> impl);
         Builder& with_prop_state_handler(std::unique_ptr<IPropStateHandler> impl);
         Builder& with_attack_handler(std::unique_ptr<IAttackHandler> impl);
+        Builder& with_session_terminator(std::unique_ptr<ISessionTerminator> impl);
+        Builder& with_position_reader(std::unique_ptr<IPositionReader> impl);
 
         [[nodiscard]] GameOrchestrator build();
 
@@ -85,6 +91,12 @@ public:
 
         /// 0x03 attack handler.
         std::unique_ptr<IAttackHandler> attack_handler_;
+
+        /// Ends sessions on DISCONNECT and timeout.
+        std::unique_ptr<ISessionTerminator> session_terminator_;
+
+        /// Reads the sender position from POSITION packets.
+        std::unique_ptr<IPositionReader> position_reader_;
     };
 
     GameOrchestrator(GameOrchestrator&&) = default;
@@ -104,7 +116,9 @@ private:
                               std::unique_ptr<IPickupHandler> pickup_handler,
                               std::unique_ptr<IReleaseHandler> release_handler,
                               std::unique_ptr<IPropStateHandler> prop_state_handler,
-                              std::unique_ptr<IAttackHandler> attack_handler);
+                              std::unique_ptr<IAttackHandler> attack_handler,
+                              std::unique_ptr<ISessionTerminator> session_terminator,
+                              std::unique_ptr<IPositionReader> position_reader);
 
     /// Player transform registry.
     std::unique_ptr<IPlayerState> player_state_;
@@ -135,6 +149,12 @@ private:
 
     /// 0x03 attack handler.
     std::unique_ptr<IAttackHandler> attack_handler_;
+
+    /// Ends sessions on DISCONNECT and timeout.
+    std::unique_ptr<ISessionTerminator> session_terminator_;
+
+    /// Reads the sender position from POSITION packets.
+    std::unique_ptr<IPositionReader> position_reader_;
 };
 
 }  // namespace v2::game

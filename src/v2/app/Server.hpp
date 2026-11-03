@@ -10,6 +10,7 @@
 #include "v2/game/PropRecord.hpp"
 #include "v2/handlers/IConnectHandler.hpp"
 #include "v2/handlers/IRelayHandler.hpp"
+#include "v2/handlers/ISenderStamp.hpp"
 
 #include <asio/io_context.hpp>
 #include <cstdint>
@@ -35,6 +36,9 @@ struct ServerDependencies {
     std::unique_ptr<IConnectHandler> connect_handler;
 
     std::unique_ptr<IRelayHandler> relay_handler;
+
+    /// Rewrites sender ids in relayed payloads; referenced by the relay and game handlers.
+    std::unique_ptr<ISenderStamp> sender_stamp;
 
     /// Game-logic orchestrator (prop management, attacks, session monitor).
     std::unique_ptr<game::GameOrchestrator> game_orchestrator;
@@ -71,6 +75,8 @@ private:
     std::unique_ptr<IConnectHandler> connect_handler_;
 
     std::unique_ptr<IRelayHandler> relay_handler_;
+
+    std::unique_ptr<ISenderStamp> sender_stamp_;
 
     std::unique_ptr<game::GameOrchestrator> game_orchestrator_;
 

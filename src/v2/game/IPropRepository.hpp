@@ -3,6 +3,7 @@
 #include "v2/game/PropDescriptor.hpp"
 #include "v2/game/PropRecord.hpp"
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -22,7 +23,9 @@ struct IPropRepository {
 
     /// Registers props from a client manifest. Existing props with the
     /// same key are NOT replaced (first manifest wins). Assigns prop_ids.
-    virtual void register_manifest(const std::vector<PropDescriptor>& descriptors) = 0;
+    /// Returns the prop_id of every descriptor, in manifest order — clients
+    /// may list props in a different order or have extra ones.
+    virtual std::vector<uint32_t> register_manifest(const std::vector<PropDescriptor>& descriptors) = 0;
 
     /// Atomically grants `prop_id` to `holder_id` if the prop is free.
     /// Returns true on success, false if already held.
@@ -33,7 +36,11 @@ struct IPropRepository {
     virtual std::optional<PropRecord> release(uint32_t prop_id) = 0;
 
     /// Releases every prop owned by `owner_id` (used on disconnect).
-    virtual void release_all_of(const std::string& owner_id) = 0;
+    /// Returns the ids of the released props.
+    virtual std::vector<uint32_t> release_all_of(const std::string& owner_id) = 0;
+
+    /// Stores the last known world position of `prop_id`; unknown ids are ignored.
+    virtual void update_position(uint32_t prop_id, const std::array<float, 3>& position) = 0;
 
     /// Returns a copy of the record for `prop_id`, or nullopt.
     virtual std::optional<PropRecord> get(uint32_t prop_id) const = 0;

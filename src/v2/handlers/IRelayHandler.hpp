@@ -10,7 +10,8 @@ using asio::ip::udp;
 
 /// Forwards relayed packets to all connected users except the sender.
 ///
-/// Pure relay — no inspection or modification of packet contents.
+/// The payload must start with [sender:str]; the server rewrites it with the
+/// id bound to the sender endpoint and drops payloads without it.
 ///
 /// Thread-safety: REQUIRED — may be called concurrently from multiple
 /// io_context worker threads (see main.cpp).

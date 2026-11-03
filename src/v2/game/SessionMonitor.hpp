@@ -2,8 +2,7 @@
 
 #include "v2/game/ISessionMonitor.hpp"
 
-#include "v2/game/IBroadcastHandler.hpp"
-#include "v2/game/IPropRepository.hpp"
+#include "v2/game/ISessionTerminator.hpp"
 #include "v2/clients/IUserRepository.hpp"
 
 #include <chrono>
@@ -13,15 +12,13 @@ namespace v2::game {
 
 /// Session liveness tracker.
 ///
-/// mark_active is called on every incoming packet. sweep evicts idle sessions
-/// and broadcasts PROP_RELEASE_EVENT for each dropped owner's props.
+/// mark_active is called on every incoming packet. sweep hands idle sessions
+/// to ISessionTerminator.
 ///
 /// Thread-safety: NOT required — accessed only on the transport strand.
 class SessionMonitor final : public ISessionMonitor {
 public:
-    SessionMonitor(IUserRepository& users,
-                   IPropRepository& props,
-                   IBroadcastHandler& broadcast);
+    SessionMonitor(IUserRepository& users, ISessionTerminator& terminator);
 
     void mark_active(const std::string& id) override;
 
@@ -30,9 +27,7 @@ public:
 private:
     IUserRepository& users_;
 
-    IPropRepository& props_;
-
-    IBroadcastHandler& broadcast_;
+    ISessionTerminator& terminator_;
 };
 
 }  // namespace v2::game

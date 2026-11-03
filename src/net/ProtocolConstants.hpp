@@ -55,4 +55,7 @@ inline constexpr uint8_t MSG_PROP_SNAPSHOT = 0x0C;
 /// 0x0D — C→S: graceful disconnect (owner stops sending).
 inline constexpr uint8_t MSG_DISCONNECT = 0x0D;
 
+/// 0x0E — S→others: a player left (DISCONNECT or idle timeout). Payload: [id:str].
+inline constexpr uint8_t MSG_PLAYER_LEFT = 0x0E;
+
 }  // namespace protocol

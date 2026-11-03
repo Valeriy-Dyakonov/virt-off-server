@@ -5,15 +5,28 @@
 //
 // Usage:
 //   test_client --port N [--host H] [--connect] [--send voice|position|none]
-//               [--payload TEXT] [--repeat N] [--listen SECONDS]
+//               [--payload TEXT] [--claim ID] [--repeat N] [--listen SECONDS]
+//               [--disconnect] [--position] [--attack TARGET_ID]
+//
+// --position sends POSITION at the origin right after connecting; --attack
+// does the same and then sends ATTACK at TARGET_ID (the server only lets it
+// through when both players' positions are known and close).
+//
+// Relayed packets are sent as [sender:str][payload]; --claim sets the sender
+// id written by the client (the server must replace it with the real one).
 //
 // Output (stdout, one token per line):
-//   CONNECTED <id>        after the server assigns an id
-//   RECV VOICE <payload>  on a relayed voice packet
-//   RECV POSITION <payload>
-//   SENT <kind> <payload> after sending to the server
+//   CONNECTED <id>                 after the server assigns an id
+//   RECV VOICE <sender> <payload>  on a relayed voice packet
+//   RECV POSITION <sender> <payload>
+//   RECV PLAYER_LEFT <id>          when another player leaves
+//   RECV ATTACK <attacker> <target> on a relayed attack
+//   SENT ATTACK <target>           after sending the attack
+//   SENT <kind> <payload>          after sending to the server
+//   SENT DISCONNECT                after the graceful disconnect
 
 #include <asio/ip/udp.hpp>
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -37,6 +50,21 @@ constexpr uint8_t kMsgVoice = 0x01;
 
 /// Control byte: position packet, relayed to other clients.
 constexpr uint8_t kMsgPosition = 0x02;
+
+/// Control byte: attack, validated by the server and broadcast to all.
+constexpr uint8_t kMsgAttack = 0x03;
+
+/// Control byte: client -> server, graceful disconnect.
+constexpr uint8_t kMsgDisconnect = 0x0D;
+
+/// POSITION body after the sender string: pos:12 + yaw:4 + flags:1.
+constexpr std::size_t kPositionBodyBytes = 17;
+
+/// ATTACK body after the target string: point:12 + impulse:12 + hitObject:1.
+constexpr std::size_t kAttackTailBytes = 25;
+
+/// Control byte: server -> others, a player left.
+constexpr uint8_t kMsgPlayerLeft = 0x0E;
 
 /// Default number of seconds spent listening after connecting.
 constexpr int kDefaultListenSeconds = 3;
@@ -62,8 +90,12 @@ struct ClientOptions {
     bool connect = true;
     std::string send = "none";
     std::string payload = "ping";
+    std::string claim = "unknown";
     int repeat = kDefaultRepeat;
     int listen_seconds = kDefaultListenSeconds;
+    bool disconnect = false;
+    bool position = false;
+    std::string attack_target;
 };
 
 /// Parses argv into ClientOptions; exits with usage on a missing --port.
@@ -80,6 +112,15 @@ ClientOptions parse_args(int argc, char* argv[]) {
             opts.send = argv[++i];
         } else if (arg == "--payload" && has_value) {
             opts.payload = argv[++i];
+        } else if (arg == "--claim" && has_value) {
+            opts.claim = argv[++i];
+        } else if (arg == "--disconnect") {
+            opts.disconnect = true;
+        } else if (arg == "--position") {
+            opts.position = true;
+        } else if (arg == "--attack" && has_value) {
+            opts.attack_target = argv[++i];
+            opts.position = true;
         } else if (arg == "--repeat" && has_value) {
             opts.repeat = std::atoi(argv[++i]);
         } else if (arg == "--listen" && has_value) {
@@ -112,28 +153,65 @@ void send_datagram(udp::socket& sock, const udp::endpoint& server, std::vector<u
     sock.send_to(asio::buffer(bytes), server, 0, ec);
 }
 
-/// Builds a payload datagram: control byte followed by the payload bytes.
-std::vector<uint8_t> make_payload_datagram(uint8_t kind, const std::string& payload) {
+/// Builds a payload datagram: control byte, [sender:str] with the claimed id, payload bytes.
+std::vector<uint8_t> make_payload_datagram(uint8_t kind, const std::string& claim, const std::string& payload) {
     std::vector<uint8_t> bytes;
-    bytes.reserve(1 + payload.size());
+    bytes.reserve(2 + claim.size() + payload.size());
     bytes.push_back(kind);
+    bytes.push_back(static_cast<uint8_t>(claim.size()));
+    bytes.insert(bytes.end(), claim.begin(), claim.end());
     bytes.insert(bytes.end(), payload.begin(), payload.end());
     return bytes;
+}
+
+/// Appends a [len:1][utf8] string.
+void append_string(std::vector<uint8_t>& bytes, const std::string& value) {
+    bytes.push_back(static_cast<uint8_t>(value.size()));
+    bytes.insert(bytes.end(), value.begin(), value.end());
+}
+
+/// POSITION at the origin: [type][sender:str][pos:12][yaw:4][flags:1], all zero.
+std::vector<uint8_t> make_position_datagram(const std::string& claim) {
+    std::vector<uint8_t> bytes{kMsgPosition};
+    append_string(bytes, claim);
+    bytes.insert(bytes.end(), kPositionBodyBytes, 0);
+    return bytes;
+}
+
+/// ATTACK: [type][attacker:str][kind:1][target:str][point:12][impulse:12][hitObject:1].
+std::vector<uint8_t> make_attack_datagram(const std::string& claim, const std::string& target) {
+    std::vector<uint8_t> bytes{kMsgAttack};
+    append_string(bytes, claim);
+    bytes.push_back(0);
+    append_string(bytes, target);
+    bytes.insert(bytes.end(), kAttackTailBytes, 0);
+    return bytes;
+}
+
+/// Reads the [len:1][utf8] string at `offset`; empty if it does not fit.
+std::string read_string(const std::vector<uint8_t>& buf, std::size_t n, std::size_t offset) {
+    if (offset >= n || offset + 1 + buf[offset] > n) {
+        return {};
+    }
+    return std::string(buf.begin() + offset + 1, buf.begin() + offset + 1 + buf[offset]);
 }
 
 /// Prints the assigned id carried by an ASSIGN_ID datagram.
 void report_assigned_id(const std::vector<uint8_t>& buf, std::size_t n) {
     const std::string id(buf.begin() + 1, buf.begin() + n);
     std::cout << "CONNECTED " << id << '\n';
+    std::cout.flush();
 }
 
-/// Prints a relayed packet (VOICE / POSITION).
+/// Prints a relayed packet (VOICE / POSITION) as "<sender> <payload>".
 void report_relay(const std::vector<uint8_t>& buf, std::size_t n) {
-    const std::string payload(buf.begin() + 1, buf.begin() + n);
+    const std::string sender = read_string(buf, n, 1);
+    const std::size_t payload_offset = std::min<std::size_t>(n, 2 + sender.size());
+    const std::string payload(buf.begin() + payload_offset, buf.begin() + n);
     if (buf[0] == kMsgVoice) {
-        std::cout << "RECV VOICE " << payload << '\n';
+        std::cout << "RECV VOICE " << sender << ' ' << payload << '\n';
     } else if (buf[0] == kMsgPosition) {
-        std::cout << "RECV POSITION " << payload << '\n';
+        std::cout << "RECV POSITION " << sender << ' ' << payload << '\n';
     }
     std::cout.flush();
 }
@@ -147,6 +225,14 @@ void handle_datagram(const std::vector<uint8_t>& buf, std::size_t n) {
         report_assigned_id(buf, n);
     } else if (buf[0] == kMsgVoice || buf[0] == kMsgPosition) {
         report_relay(buf, n);
+    } else if (buf[0] == kMsgAttack) {
+        const std::string attacker = read_string(buf, n, 1);
+        const std::string target = read_string(buf, n, 2 + attacker.size() + 1);
+        std::cout << "RECV ATTACK " << attacker << ' ' << target << '\n';
+        std::cout.flush();
+    } else if (buf[0] == kMsgPlayerLeft) {
+        std::cout << "RECV PLAYER_LEFT " << read_string(buf, n, 1) << '\n';
+        std::cout.flush();
     }
 }
 
@@ -209,11 +295,24 @@ int main(int argc, char* argv[]) {
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(opts.listen_seconds);
 
+    if (opts.position) {
+        for (int i = 0; i < opts.repeat; ++i) {
+            send_datagram(sock, server, make_position_datagram(opts.claim));
+            std::this_thread::sleep_for(std::chrono::milliseconds(kSendGapMs));
+        }
+    }
+
+    if (!opts.attack_target.empty()) {
+        send_datagram(sock, server, make_attack_datagram(opts.claim, opts.attack_target));
+        std::cout << "SENT ATTACK " << opts.attack_target << '\n';
+        std::cout.flush();
+    }
+
     const uint8_t kind = send_kind_byte(opts.send);
     if (kind != 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(kSendGapMs));
         for (int i = 0; i < opts.repeat; ++i) {
-            send_datagram(sock, server, make_payload_datagram(kind, opts.payload));
+            send_datagram(sock, server, make_payload_datagram(kind, opts.claim, opts.payload));
             std::cout << "SENT " << opts.send << ' ' << opts.payload << '\n';
             std::cout.flush();
             std::this_thread::sleep_for(std::chrono::milliseconds(kSendGapMs));
@@ -221,5 +320,11 @@ int main(int argc, char* argv[]) {
     }
 
     receive_until(sock, deadline);
+
+    if (opts.disconnect) {
+        send_datagram(sock, server, std::vector<uint8_t>{kMsgDisconnect});
+        std::cout << "SENT DISCONNECT\n";
+        std::cout.flush();
+    }
     return 0;
 }

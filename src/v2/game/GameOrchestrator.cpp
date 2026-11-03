@@ -14,6 +14,8 @@ IPickupHandler& GameOrchestrator::pickup_handler() { return *pickup_handler_; }
 IReleaseHandler& GameOrchestrator::release_handler() { return *release_handler_; }
 IPropStateHandler& GameOrchestrator::prop_state_handler() { return *prop_state_handler_; }
 IAttackHandler& GameOrchestrator::attack_handler() { return *attack_handler_; }
+ISessionTerminator& GameOrchestrator::session_terminator() { return *session_terminator_; }
+IPositionReader& GameOrchestrator::position_reader() { return *position_reader_; }
 
 // -- Builder --
 
@@ -67,6 +69,16 @@ GameOrchestrator::Builder& GameOrchestrator::Builder::with_attack_handler(std::u
     return *this;
 }
 
+GameOrchestrator::Builder& GameOrchestrator::Builder::with_session_terminator(std::unique_ptr<ISessionTerminator> impl) {
+    session_terminator_ = std::move(impl);
+    return *this;
+}
+
+GameOrchestrator::Builder& GameOrchestrator::Builder::with_position_reader(std::unique_ptr<IPositionReader> impl) {
+    position_reader_ = std::move(impl);
+    return *this;
+}
+
 GameOrchestrator GameOrchestrator::Builder::build() {
     return GameOrchestrator(
         std::move(player_state_),
@@ -78,7 +90,9 @@ GameOrchestrator GameOrchestrator::Builder::build() {
         std::move(pickup_handler_),
         std::move(release_handler_),
         std::move(prop_state_handler_),
-        std::move(attack_handler_));
+        std::move(attack_handler_),
+        std::move(session_terminator_),
+        std::move(position_reader_));
 }
 
 // -- Private constructor --
@@ -92,7 +106,9 @@ GameOrchestrator::GameOrchestrator(std::unique_ptr<IPlayerState> player_state,
                                    std::unique_ptr<IPickupHandler> pickup_handler,
                                    std::unique_ptr<IReleaseHandler> release_handler,
                                    std::unique_ptr<IPropStateHandler> prop_state_handler,
-                                   std::unique_ptr<IAttackHandler> attack_handler)
+                                   std::unique_ptr<IAttackHandler> attack_handler,
+                                   std::unique_ptr<ISessionTerminator> session_terminator,
+                                   std::unique_ptr<IPositionReader> position_reader)
     : player_state_(std::move(player_state))
     , prop_repository_(std::move(prop_repository))
     , attack_gate_(std::move(attack_gate))
@@ -102,6 +118,8 @@ GameOrchestrator::GameOrchestrator(std::unique_ptr<IPlayerState> player_state,
     , pickup_handler_(std::move(pickup_handler))
     , release_handler_(std::move(release_handler))
     , prop_state_handler_(std::move(prop_state_handler))
-    , attack_handler_(std::move(attack_handler)) {}
+    , attack_handler_(std::move(attack_handler))
+    , session_terminator_(std::move(session_terminator))
+    , position_reader_(std::move(position_reader)) {}
 
 }  // namespace v2::game

@@ -54,6 +54,8 @@ set(V2_GAME_SOURCES
     src/v2/game/PropStateHandler.cpp
     src/v2/game/AttackHandler.cpp
     src/v2/game/GameOrchestrator.cpp
+    src/v2/game/PositionReader.cpp
+    src/v2/game/SessionTerminator.cpp
 )
 
 set(V2_SOURCES
@@ -61,6 +63,7 @@ set(V2_SOURCES
     src/v2/clients/UserRepository.cpp
     src/v2/handlers/ConnectHandler.cpp
     src/v2/handlers/RelayHandler.cpp
+    src/v2/handlers/SenderStamp.cpp
     src/v2/app/Server.cpp
     src/v2/app/ServerBuilder.cpp
     ${V2_GAME_SOURCES}
@@ -78,6 +81,10 @@ add_library(virt-off-server-core STATIC
 
 target_include_directories(virt-off-server-core PUBLIC src)
 target_include_directories(virt-off-server-core PUBLIC ${asio_SOURCE_DIR}/asio/include)
+if(WIN32)
+    # asio на Windows (MinGW из CLion) работает через Winsock.
+    target_link_libraries(virt-off-server-core PUBLIC ws2_32 mswsock)
+endif()
 
 # ---- Executable ----
 add_executable(virt-off-server src/main.cpp)
@@ -94,6 +101,9 @@ add_test(
 add_executable(test_client tests/integration/test_client.cpp)
 target_include_directories(test_client PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_link_libraries(test_client PRIVATE Threads::Threads)
+if(WIN32)
+    target_link_libraries(test_client PRIVATE ws2_32 mswsock)
+endif()
 
 # Multiplayer integration test: real v2 server + listener/sender clients.
 # Registered in CTest but NOT run automatically on every build (slower,

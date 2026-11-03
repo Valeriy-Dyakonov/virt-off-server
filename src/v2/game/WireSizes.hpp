@@ -45,7 +45,7 @@ inline constexpr uint8_t kPropFlagSettled = 0x01;
 inline constexpr size_t kPropStatePropIdOff = kStrLenBytes;  // past id length byte
 
 /// Offsets within a POSITION payload (after type byte):
-/// [id:str|pos:12|rot:16|vel:12]
+/// [id:str|pos:12|yaw:4|flags:1]
 inline constexpr size_t kPosPosOff    = kStrLenBytes;         // past id length byte
 
 /// Offsets within a PROP_GRANT payload:
