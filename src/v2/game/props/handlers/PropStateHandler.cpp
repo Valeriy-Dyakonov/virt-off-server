@@ -24,7 +24,7 @@ PropStateHandler::PropStateHandler(const IUserRepository& users,
     , broadcaster_(broadcaster)
     , logger_(logger) {}
 
-void PropStateHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void PropStateHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     const auto state = reader_.read(payload);
     if (!sender_id.has_value() || !state.has_value()) {

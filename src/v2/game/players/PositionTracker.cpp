@@ -7,7 +7,7 @@ namespace v2::game {
 PositionTracker::PositionTracker(const IUserRepository& users, const IPositionReader& reader, IPlayerState& state)
     : users_(users), reader_(reader), state_(state) {}
 
-void PositionTracker::observe(const asio::ip::udp::endpoint& from, std::span<const uint8_t> datagram) {
+void PositionTracker::observe(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> datagram) {
     if (datagram[0] != protocol::MSG_POSITION) {
         return;
     }

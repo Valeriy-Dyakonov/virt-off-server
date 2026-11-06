@@ -15,7 +15,7 @@ class UdpTransport final : public ITransport {
 public:
     UdpTransport(asio::io_context& io_ctx, ILogger& logger);
 
-    void start(udp::endpoint local) override;
+    void start(const udp::endpoint& local) override;
 
     void send_to(const udp::endpoint& dest, std::span<const uint8_t> data) override;
 

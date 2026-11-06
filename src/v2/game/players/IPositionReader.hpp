@@ -16,7 +16,7 @@ struct IPositionReader {
     virtual ~IPositionReader() = default;
 
     /// Returns the sender position, or nullopt if the payload is truncated.
-    virtual std::optional<Vec3> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<Vec3> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::game

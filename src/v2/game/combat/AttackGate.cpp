@@ -28,7 +28,7 @@ AttackGate::AttackGate(const IPlayerState& players) : players_(players) {}
 
 bool AttackGate::allow_attack(const std::string& attacker_id,
                               const std::string& target_id,
-                              std::chrono::steady_clock::time_point now) {
+                              const std::chrono::steady_clock::time_point now) {
     const std::string pair_key = std::format("{}:{}", attacker_id, target_id);
     if (const auto it = last_hits_.find(pair_key); it != last_hits_.end() && now - it->second < kAttackCooldown) {
         return false;

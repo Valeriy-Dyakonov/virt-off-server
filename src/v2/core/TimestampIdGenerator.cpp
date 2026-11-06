@@ -11,7 +11,7 @@ uint64_t TimestampIdGenerator::current_millis() {
 }
 
 std::string TimestampIdGenerator::next() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     const uint64_t millis = current_millis();
     if (millis == last_millis_) {

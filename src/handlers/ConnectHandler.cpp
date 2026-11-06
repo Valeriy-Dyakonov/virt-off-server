@@ -4,7 +4,6 @@
 
 #include <cstring>
 #include <format>
-#include <string>
 #include <vector>
 
 ConnectHandler::ConnectHandler(IClientRepository& clients, ITransport& transport, ILogger& logger)

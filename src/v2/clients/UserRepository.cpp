@@ -49,7 +49,7 @@ std::optional<std::string> UserRepository::find_id_by_endpoint(const asio::ip::u
     return it->second;
 }
 
-void UserRepository::touch(const std::string& id, std::chrono::steady_clock::time_point now) {
+void UserRepository::touch(const std::string& id, const std::chrono::steady_clock::time_point now) {
     const std::scoped_lock lock(mutex_);
 
     if (const auto it = by_id_.find(id); it != by_id_.end()) {

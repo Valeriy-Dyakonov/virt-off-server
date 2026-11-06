@@ -109,7 +109,7 @@ struct ClientOptions {
 };
 
 /// Parses argv into ClientOptions; exits with usage on a missing --port.
-ClientOptions parse_args(int argc, char* argv[]) {
+ClientOptions parse_args(const int argc, char* argv[]) {
     ClientOptions opts;
     for (int i = 1; i < argc; ++i) {
         const std::string_view arg = argv[i];
@@ -160,13 +160,13 @@ uint8_t send_kind_byte(const std::string& kind) {
 }
 
 /// Sends one datagram to the server endpoint.
-void send_datagram(udp::socket& sock, const udp::endpoint& server, std::vector<uint8_t> bytes) {
+void send_datagram(udp::socket& sock, const udp::endpoint& server, const std::vector<uint8_t>& bytes) {
     asio::error_code ec;
     sock.send_to(asio::buffer(bytes), server, 0, ec);
 }
 
 /// Builds a payload datagram: control byte, [sender:str] with the claimed id, payload bytes.
-std::vector<uint8_t> make_payload_datagram(uint8_t kind, const std::string& claim, const std::string& payload) {
+std::vector<uint8_t> make_payload_datagram(const uint8_t kind, const std::string& claim, const std::string& payload) {
     std::vector<uint8_t> bytes;
     bytes.reserve(2 + claim.size() + payload.size());
     bytes.push_back(kind);
@@ -209,7 +209,7 @@ std::vector<uint8_t> make_set_name_datagram(const std::string& claim, const std:
 }
 
 /// Reads the [len:1][utf8] string at `offset`; empty if it does not fit.
-std::string read_string(const std::vector<uint8_t>& buf, std::size_t n, std::size_t offset) {
+std::string read_string(const std::vector<uint8_t>& buf, const std::size_t n, const std::size_t offset) {
     if (offset >= n || offset + 1 + buf[offset] > n) {
         return {};
     }
@@ -217,14 +217,14 @@ std::string read_string(const std::vector<uint8_t>& buf, std::size_t n, std::siz
 }
 
 /// Prints the assigned id carried by an ASSIGN_ID datagram.
-void report_assigned_id(const std::vector<uint8_t>& buf, std::size_t n) {
+void report_assigned_id(const std::vector<uint8_t>& buf, const std::size_t n) {
     const std::string id(buf.begin() + 1, buf.begin() + n);
     std::cout << "CONNECTED " << id << '\n';
     std::cout.flush();
 }
 
 /// Prints a relayed packet (VOICE / POSITION) as "<sender> <payload>".
-void report_relay(const std::vector<uint8_t>& buf, std::size_t n) {
+void report_relay(const std::vector<uint8_t>& buf, const std::size_t n) {
     const std::string sender = read_string(buf, n, 1);
     const std::size_t payload_offset = std::min<std::size_t>(n, 2 + sender.size());
     const std::string payload(buf.begin() + payload_offset, buf.begin() + n);
@@ -237,7 +237,7 @@ void report_relay(const std::vector<uint8_t>& buf, std::size_t n) {
 }
 
 /// Dispatches a received datagram.
-void handle_datagram(const std::vector<uint8_t>& buf, std::size_t n) {
+void handle_datagram(const std::vector<uint8_t>& buf, const std::size_t n) {
     if (n == 0) {
         return;
     }
@@ -262,7 +262,7 @@ void handle_datagram(const std::vector<uint8_t>& buf, std::size_t n) {
 }
 
 /// Receives and prints datagrams until the deadline elapses.
-void receive_until(udp::socket& sock, std::chrono::steady_clock::time_point deadline) {
+void receive_until(udp::socket& sock, const std::chrono::steady_clock::time_point deadline) {
     std::vector<uint8_t> buf(kMaxDatagram);
     while (std::chrono::steady_clock::now() < deadline) {
         asio::error_code ec;
@@ -280,7 +280,7 @@ void receive_until(udp::socket& sock, std::chrono::steady_clock::time_point dead
 
 /// Waits for the ASSIGN_ID reply, printing CONNECTED <id>. Returns whether the
 /// assignment arrived before the deadline. Other datagrams are ignored.
-bool wait_for_assignment(udp::socket& sock, std::chrono::steady_clock::time_point deadline) {
+bool wait_for_assignment(udp::socket& sock, const std::chrono::steady_clock::time_point deadline) {
     std::vector<uint8_t> buf(kMaxDatagram);
     while (std::chrono::steady_clock::now() < deadline) {
         asio::error_code ec;
@@ -302,7 +302,7 @@ bool wait_for_assignment(udp::socket& sock, std::chrono::steady_clock::time_poin
 
 }  // namespace
 
-int main(int argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
     const ClientOptions opts = parse_args(argc, argv);
 
     asio::io_context io;

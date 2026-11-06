@@ -10,7 +10,7 @@
 
 #include <memory>
 
-ServerBuilder::ServerBuilder(asio::io_context& io_ctx, uint16_t port) : io_ctx_(io_ctx), port_(port) {}
+ServerBuilder::ServerBuilder(asio::io_context& io_ctx, const uint16_t port) : io_ctx_(io_ctx), port_(port) {}
 
 std::unique_ptr<IServer> ServerBuilder::build() {
     auto logger = std::make_unique<ConsoleLogger>();

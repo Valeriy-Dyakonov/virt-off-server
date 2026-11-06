@@ -12,7 +12,7 @@ namespace {
 
 /// Appends the little-endian bytes of `value`.
 template <typename T>
-void append(std::vector<uint8_t>& bytes, T value) {
+void append(std::vector<uint8_t>& bytes, const T value) {
     std::array<uint8_t, sizeof(T)> raw{};
     std::memcpy(raw.data(), &value, sizeof(T));
     bytes.insert(bytes.end(), raw.begin(), raw.end());
@@ -20,26 +20,26 @@ void append(std::vector<uint8_t>& bytes, T value) {
 
 }  // namespace
 
-WireWriter& WireWriter::u8(uint8_t value) {
+WireWriter& WireWriter::u8(const uint8_t value) {
     bytes_.push_back(value);
     return *this;
 }
 
-WireWriter& WireWriter::byte(std::byte value) {
+WireWriter& WireWriter::byte(const std::byte value) {
     return u8(std::to_integer<uint8_t>(value));
 }
 
-WireWriter& WireWriter::u16(uint16_t value) {
+WireWriter& WireWriter::u16(const uint16_t value) {
     append(bytes_, value);
     return *this;
 }
 
-WireWriter& WireWriter::u32(uint32_t value) {
+WireWriter& WireWriter::u32(const uint32_t value) {
     append(bytes_, value);
     return *this;
 }
 
-WireWriter& WireWriter::str(std::string_view value) {
+WireWriter& WireWriter::str(const std::string_view value) {
     if (value.size() > kMaxStringBytes) {
         ok_ = false;
         return *this;
@@ -49,7 +49,7 @@ WireWriter& WireWriter::str(std::string_view value) {
     return *this;
 }
 
-WireWriter& WireWriter::bytes(std::span<const uint8_t> value) {
+WireWriter& WireWriter::bytes(const std::span<const uint8_t> value) {
     bytes_.insert(bytes_.end(), value.begin(), value.end());
     return *this;
 }

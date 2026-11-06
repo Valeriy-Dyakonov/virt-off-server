@@ -15,7 +15,7 @@ struct IAttackTargetReader {
     virtual ~IAttackTargetReader() = default;
 
     /// Returns the target id, or nullopt if the payload is truncated before its end.
-    virtual std::optional<std::string> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<std::string> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::game

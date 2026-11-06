@@ -31,10 +31,10 @@ public:
     WireWriter& bytes(std::span<const uint8_t> value);
 
     /// True while every string fitted its length prefix.
-    bool ok() const;
+    [[nodiscard]] bool ok() const;
 
     /// Moves the payload out.
-    std::vector<uint8_t> take();
+    [[nodiscard]] std::vector<uint8_t> take();
 
 private:
     std::vector<uint8_t> bytes_;

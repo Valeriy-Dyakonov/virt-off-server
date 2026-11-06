@@ -13,7 +13,7 @@ namespace {
 
 /// Copies `field` into a value of type T; zero if the field is empty (failed read).
 template <typename T>
-T decode(std::span<const uint8_t> field) {
+T decode(const std::span<const uint8_t> field) {
     T value{};
     if (field.size() == sizeof(T)) {
         std::memcpy(&value, field.data(), sizeof(T));
@@ -23,16 +23,16 @@ T decode(std::span<const uint8_t> field) {
 
 }  // namespace
 
-WireReader::WireReader(std::span<const uint8_t> bytes) : bytes_(bytes) {}
+WireReader::WireReader(const std::span<const uint8_t> bytes) : bytes_(bytes) {}
 
-std::span<const uint8_t> WireReader::take(size_t count) {
+std::span<const uint8_t> WireReader::take(const size_t count) {
     if (!ok_ || bytes_.size() - offset_ < count) {
         ok_ = false;
         return {};
     }
-    const auto field = bytes_.subspan(offset_, count);
+    const size_t start = offset_;
     offset_ += count;
-    return field;
+    return bytes_.subspan(start, count);
 }
 
 uint8_t WireReader::u8() {
@@ -68,7 +68,7 @@ void WireReader::skip_str() {
     take(u8());
 }
 
-void WireReader::skip(size_t count) {
+void WireReader::skip(const size_t count) {
     take(count);
 }
 

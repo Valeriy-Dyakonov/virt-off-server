@@ -15,7 +15,7 @@ AttackHandler::AttackHandler(const IUserRepository& users,
                              ILogger& logger)
     : users_(users), reader_(reader), gate_(gate), stamp_(stamp), broadcaster_(broadcaster), logger_(logger) {}
 
-void AttackHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void AttackHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     const auto target_id = reader_.read(payload);
     const auto stamped = sender_id.has_value() ? stamp_.stamp(payload, *sender_id) : std::nullopt;

@@ -7,7 +7,7 @@ namespace v2::game {
 /// Stateless IManifestAckEncoder.
 class ManifestAckEncoder final : public IManifestAckEncoder {
 public:
-    std::vector<uint8_t> encode(const std::vector<uint32_t>& prop_ids) const override;
+    [[nodiscard]] std::vector<uint8_t> encode(const std::vector<uint32_t>& prop_ids) const override;
 };
 
 }  // namespace v2::game

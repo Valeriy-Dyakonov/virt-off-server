@@ -14,7 +14,7 @@ struct IPropIdReader {
     virtual ~IPropIdReader() = default;
 
     /// Returns the prop id, or nullopt if the payload is truncated.
-    virtual std::optional<uint32_t> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<uint32_t> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::game

@@ -9,7 +9,7 @@ namespace v2::game {
 PropReach::PropReach(const IPlayerState& players, const IPropRepository& props, ILogger& logger)
     : players_(players), props_(props), logger_(logger) {}
 
-bool PropReach::within_reach(const std::string& player_id, uint32_t prop_id) const {
+bool PropReach::within_reach(const std::string& player_id, const uint32_t prop_id) const {
     const auto prop = props_.get(prop_id);
     const auto player = players_.position(player_id);
     if (!prop.has_value() || !player.has_value()) {

@@ -57,7 +57,7 @@ net::ModuleBindings PropModule::bindings() {
     };
 }
 
-IPropReleaser& PropModule::releaser() {
+IPropReleaser& PropModule::releaser() const {
     return *releaser_;
 }
 

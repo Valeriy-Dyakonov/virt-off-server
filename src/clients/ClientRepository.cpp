@@ -1,13 +1,13 @@
 #include "clients/ClientRepository.hpp"
 
-uint64_t ClientRepository::add(udp::endpoint ep) {
+uint64_t ClientRepository::add(const udp::endpoint& ep) {
     const uint64_t id = next_id_++;
     by_id_[id] = ep;
     by_endpoint_[ep] = id;
     return id;
 }
 
-void ClientRepository::remove(uint64_t id) {
+void ClientRepository::remove(const uint64_t id) {
     const auto it = by_id_.find(id);
     if (it == by_id_.end()) {
         return;
@@ -26,11 +26,10 @@ std::optional<uint64_t> ClientRepository::find_by_endpoint(const udp::endpoint& 
     return it->second;
 }
 
-void ClientRepository::for_each_except(uint64_t exclude_id,
-                                       std::function<void(uint64_t, const udp::endpoint&)> fn) const {
+void ClientRepository::for_each_except(const uint64_t exclude_id, const Visitor& visit) const {
     for (const auto& [id, ep] : by_id_) {
         if (id != exclude_id) {
-            fn(id, ep);
+            visit(id, ep);
         }
     }
 }

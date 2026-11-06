@@ -14,7 +14,7 @@ struct IPlayerNameReader {
     virtual ~IPlayerNameReader() = default;
 
     /// Returns the name bytes as sent (not validated), or nullopt if the payload is truncated.
-    virtual std::optional<std::string> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<std::string> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::names

@@ -4,7 +4,7 @@
 
 namespace v2::game {
 
-std::optional<uint32_t> PropIdReader::read(std::span<const uint8_t> payload) const {
+std::optional<uint32_t> PropIdReader::read(const std::span<const uint8_t> payload) const {
     net::WireReader reader(payload);
     reader.skip_str();
     const uint32_t prop_id = reader.u32();

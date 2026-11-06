@@ -4,7 +4,7 @@
 
 namespace v2::game {
 
-std::optional<Vec3> PositionReader::read(std::span<const uint8_t> payload) const {
+std::optional<Vec3> PositionReader::read(const std::span<const uint8_t> payload) const {
     net::WireReader reader(payload);
     reader.skip_str();
     const Vec3 position = reader.vec3();

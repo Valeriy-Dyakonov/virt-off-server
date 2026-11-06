@@ -41,10 +41,10 @@ public:
     void skip(size_t count);
 
     /// Bytes not read yet (empty after a failed read).
-    std::span<const uint8_t> rest() const;
+    [[nodiscard]] std::span<const uint8_t> rest() const;
 
     /// True while nothing was read past the end.
-    bool ok() const;
+    [[nodiscard]] bool ok() const;
 
 private:
     /// Returns the next `count` bytes and advances, or fails and returns an empty span.

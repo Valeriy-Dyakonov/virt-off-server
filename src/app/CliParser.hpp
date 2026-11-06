@@ -9,5 +9,5 @@
 /// concurrency when --threads is absent.
 class CliParser final : public ICliParser {
 public:
-    CliOptions parse(int argc, char* argv[]) const override;
+    [[nodiscard]] CliOptions parse(int argc, char* argv[]) const override;
 };

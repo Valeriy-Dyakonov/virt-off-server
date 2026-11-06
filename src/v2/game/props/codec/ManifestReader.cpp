@@ -4,7 +4,7 @@
 
 namespace v2::game {
 
-std::optional<std::vector<PropDescriptor>> ManifestReader::read(std::span<const uint8_t> payload) const {
+std::optional<std::vector<PropDescriptor>> ManifestReader::read(const std::span<const uint8_t> payload) const {
     net::WireReader reader(payload);
     reader.skip_str();
     const uint16_t count = reader.u16();

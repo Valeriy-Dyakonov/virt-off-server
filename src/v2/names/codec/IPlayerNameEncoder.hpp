@@ -13,7 +13,7 @@ struct IPlayerNameEncoder {
     virtual ~IPlayerNameEncoder() = default;
 
     /// `id` and `name` must each fit in 255 bytes (ids are short, names are sanitized).
-    virtual std::vector<uint8_t> encode(const std::string& id, const std::string& name) const = 0;
+    [[nodiscard]] virtual std::vector<uint8_t> encode(const std::string& id, const std::string& name) const = 0;
 };
 
 }  // namespace v2::names

@@ -7,7 +7,7 @@ namespace v2::game {
 
 GrantAnnouncer::GrantAnnouncer(net::IBroadcaster& broadcaster) : broadcaster_(broadcaster) {}
 
-void GrantAnnouncer::announce(uint32_t prop_id, const std::string& holder_id, std::byte flags) {
+void GrantAnnouncer::announce(const uint32_t prop_id, const std::string& holder_id, const std::byte flags) {
     const auto grant = net::WireWriter{}.u32(prop_id).str(holder_id).byte(flags).take();
     broadcaster_.broadcast(protocol::MSG_PROP_GRANT, grant);
 }

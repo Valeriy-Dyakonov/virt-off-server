@@ -14,27 +14,27 @@ namespace v2::game {
 /// prop_id is the 1-based index of the record; 0 is never assigned.
 class PropRepository final : public IPropRepository, public IPropSimulation {
 public:
-    std::vector<uint32_t> register_manifest(const std::vector<PropDescriptor>& descriptors) override;
+    [[nodiscard]] std::vector<uint32_t> register_manifest(const std::vector<PropDescriptor>& descriptors) override;
 
-    bool try_grant(uint32_t prop_id, const std::string& holder_id) override;
+    [[nodiscard]] bool try_grant(uint32_t prop_id, const std::string& holder_id) override;
 
-    std::vector<uint32_t> release_all_of(const std::string& owner_id) override;
+    [[nodiscard]] std::vector<uint32_t> release_all_of(const std::string& owner_id) override;
 
     void update_position(uint32_t prop_id, const Vec3& position) override;
 
-    std::optional<PropRecord> get(uint32_t prop_id) const override;
+    [[nodiscard]] std::optional<PropRecord> get(uint32_t prop_id) const override;
 
-    bool try_simulate(uint32_t prop_id, const std::string& owner_id,
+    [[nodiscard]] bool try_simulate(uint32_t prop_id, const std::string& owner_id,
                       std::chrono::steady_clock::time_point now) override;
 
-    bool begin_simulation(uint32_t prop_id, const std::string& owner_id,
+    [[nodiscard]] bool begin_simulation(uint32_t prop_id, const std::string& owner_id,
                           std::chrono::steady_clock::time_point now) override;
 
-    bool end_simulation(uint32_t prop_id, const std::string& owner_id) override;
+    [[nodiscard]] bool end_simulation(uint32_t prop_id, const std::string& owner_id) override;
 
     void touch(uint32_t prop_id, std::chrono::steady_clock::time_point now) override;
 
-    std::vector<uint32_t> expire(std::chrono::steady_clock::time_point now,
+    [[nodiscard]] std::vector<uint32_t> expire(std::chrono::steady_clock::time_point now,
                                  std::chrono::milliseconds timeout) override;
 
 private:

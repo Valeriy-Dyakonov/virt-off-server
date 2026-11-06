@@ -14,7 +14,7 @@ namespace v2 {
 /// unique within the process lifetime.
 class TimestampIdGenerator final : public IIdGenerator {
 public:
-    std::string next() override;
+    [[nodiscard]] std::string next() override;
 
 private:
     /// Returns the current wall-clock time in milliseconds since Unix epoch.

@@ -25,10 +25,11 @@ struct IUserRepository {
     virtual void remove(const std::string& id) = 0;
 
     /// Returns a copy of the user `id`, or nullopt.
-    virtual std::optional<UserInfo> find_by_id(const std::string& id) const = 0;
+    [[nodiscard]] virtual std::optional<UserInfo> find_by_id(const std::string& id) const = 0;
 
     /// Returns the id bound to `endpoint`, or nullopt.
-    virtual std::optional<std::string> find_id_by_endpoint(const asio::ip::udp::endpoint& endpoint) const = 0;
+    [[nodiscard]] virtual std::optional<std::string> find_id_by_endpoint(
+        const asio::ip::udp::endpoint& endpoint) const = 0;
 
     /// Sets `last_seen` of the user `id`; unknown ids are ignored.
     virtual void touch(const std::string& id, std::chrono::steady_clock::time_point now) = 0;

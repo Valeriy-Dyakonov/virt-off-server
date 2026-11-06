@@ -41,7 +41,7 @@ public:
     net::ModuleBindings bindings() override;
 
     /// Frees the props of a player who left; used by the session module.
-    IPropReleaser& releaser();
+    [[nodiscard]] IPropReleaser& releaser() const;
 
 private:
     /// Serves both IPropRepository and IPropSimulation.

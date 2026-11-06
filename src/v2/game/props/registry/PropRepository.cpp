@@ -13,7 +13,7 @@ void make_free(PropRecord& record) {
 
 }  // namespace
 
-PropRecord* PropRepository::find(uint32_t prop_id) {
+PropRecord* PropRepository::find(const uint32_t prop_id) {
     if (prop_id == 0 || prop_id > records_.size()) {
         return nullptr;
     }
@@ -39,7 +39,7 @@ std::vector<uint32_t> PropRepository::register_manifest(const std::vector<PropDe
     return ids;
 }
 
-bool PropRepository::try_grant(uint32_t prop_id, const std::string& holder_id) {
+bool PropRepository::try_grant(const uint32_t prop_id, const std::string& holder_id) {
     auto* record = find(prop_id);
     if (record == nullptr || (!record->owner_id.empty() && record->owner_id != holder_id)) {
         return false;
@@ -60,22 +60,22 @@ std::vector<uint32_t> PropRepository::release_all_of(const std::string& owner_id
     return released;
 }
 
-void PropRepository::update_position(uint32_t prop_id, const Vec3& position) {
+void PropRepository::update_position(const uint32_t prop_id, const Vec3& position) {
     if (auto* record = find(prop_id)) {
         record->position = position;
         record->has_position = true;
     }
 }
 
-std::optional<PropRecord> PropRepository::get(uint32_t prop_id) const {
+std::optional<PropRecord> PropRepository::get(const uint32_t prop_id) const {
     if (prop_id == 0 || prop_id > records_.size()) {
         return std::nullopt;
     }
     return records_[prop_id - 1];
 }
 
-bool PropRepository::try_simulate(uint32_t prop_id, const std::string& owner_id,
-                                  std::chrono::steady_clock::time_point now) {
+bool PropRepository::try_simulate(const uint32_t prop_id, const std::string& owner_id,
+                                  const std::chrono::steady_clock::time_point now) {
     auto* record = find(prop_id);
     if (record == nullptr || record->held || (!record->owner_id.empty() && record->owner_id != owner_id)) {
         return false;
@@ -85,8 +85,8 @@ bool PropRepository::try_simulate(uint32_t prop_id, const std::string& owner_id,
     return true;
 }
 
-bool PropRepository::begin_simulation(uint32_t prop_id, const std::string& owner_id,
-                                      std::chrono::steady_clock::time_point now) {
+bool PropRepository::begin_simulation(const uint32_t prop_id, const std::string& owner_id,
+                                      const std::chrono::steady_clock::time_point now) {
     auto* record = find(prop_id);
     if (record == nullptr || record->owner_id != owner_id) {
         return false;
@@ -96,7 +96,7 @@ bool PropRepository::begin_simulation(uint32_t prop_id, const std::string& owner
     return true;
 }
 
-bool PropRepository::end_simulation(uint32_t prop_id, const std::string& owner_id) {
+bool PropRepository::end_simulation(const uint32_t prop_id, const std::string& owner_id) {
     auto* record = find(prop_id);
     if (record == nullptr || record->owner_id.empty() || record->owner_id != owner_id) {
         return false;
@@ -105,14 +105,14 @@ bool PropRepository::end_simulation(uint32_t prop_id, const std::string& owner_i
     return true;
 }
 
-void PropRepository::touch(uint32_t prop_id, std::chrono::steady_clock::time_point now) {
+void PropRepository::touch(const uint32_t prop_id, const std::chrono::steady_clock::time_point now) {
     if (auto* record = find(prop_id)) {
         record->last_activity = now;
     }
 }
 
-std::vector<uint32_t> PropRepository::expire(std::chrono::steady_clock::time_point now,
-                                             std::chrono::milliseconds timeout) {
+std::vector<uint32_t> PropRepository::expire(const std::chrono::steady_clock::time_point now,
+                                             const std::chrono::milliseconds timeout) {
     std::vector<uint32_t> expired;
     for (auto& record : records_) {
         if (!record.owner_id.empty() && now - record.last_activity > timeout) {

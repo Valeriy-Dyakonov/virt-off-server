@@ -18,7 +18,7 @@ public:
     net::ModuleBindings bindings() override;
 
     /// Positions read by the props and combat modules.
-    IPlayerState& state();
+    [[nodiscard]] IPlayerState& state() const;
 
 private:
     std::unique_ptr<IPlayerState> state_;

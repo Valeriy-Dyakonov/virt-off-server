@@ -16,7 +16,7 @@ constexpr size_t kTailBytes = net::kVec3Bytes + net::kVec3Bytes + net::kU8Bytes;
 
 }  // namespace
 
-std::optional<std::vector<uint8_t>> ReleaseEventEncoder::encode_throw(std::span<const uint8_t> release_payload,
+std::optional<std::vector<uint8_t>> ReleaseEventEncoder::encode_throw(const std::span<const uint8_t> release_payload,
                                                                       const std::string& owner_id) const {
     net::WireReader reader(release_payload);
     reader.skip_str();
@@ -34,7 +34,7 @@ std::optional<std::vector<uint8_t>> ReleaseEventEncoder::encode_throw(std::span<
     return writer.take();
 }
 
-std::vector<uint8_t> ReleaseEventEncoder::encode_free(uint32_t prop_id) const {
+std::vector<uint8_t> ReleaseEventEncoder::encode_free(const uint32_t prop_id) const {
     constexpr std::array<uint8_t, net::kVec3Bytes + net::kVec3Bytes> kNoVelocity{};
     return net::WireWriter{}.u32(prop_id).str({}).bytes(kNoVelocity).byte(kReleaseFlagSettled).take();
 }

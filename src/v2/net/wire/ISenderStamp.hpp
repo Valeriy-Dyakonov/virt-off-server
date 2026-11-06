@@ -21,7 +21,7 @@ struct ISenderStamp {
     /// Returns `payload` (without the type byte) with its leading string
     /// replaced by `sender_id`, or nullopt if the payload does not start with
     /// a complete string or `sender_id` is longer than kMaxStringBytes.
-    virtual std::optional<std::vector<uint8_t>> stamp(std::span<const uint8_t> payload,
+    [[nodiscard]] virtual std::optional<std::vector<uint8_t>> stamp(std::span<const uint8_t> payload,
                                                       const std::string& sender_id) const = 0;
 };
 

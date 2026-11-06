@@ -5,7 +5,7 @@
 
 namespace v2::game {
 
-std::optional<std::string> AttackTargetReader::read(std::span<const uint8_t> payload) const {
+std::optional<std::string> AttackTargetReader::read(const std::span<const uint8_t> payload) const {
     net::WireReader reader(payload);
     reader.skip_str();
     reader.skip(net::kU8Bytes);  // kind

@@ -3,12 +3,11 @@
 #include "v2/game/GameConstants.hpp"
 
 #include <format>
-#include <string>
 #include <utility>
 
 namespace v2 {
 
-Server::Server(ServerComponents components, uint16_t port) : components_(std::move(components)), port_(port) {}
+Server::Server(ServerComponents components, const uint16_t port) : components_(std::move(components)), port_(port) {}
 
 Server::~Server() {
     Stop();

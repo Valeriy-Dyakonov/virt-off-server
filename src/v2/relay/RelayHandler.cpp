@@ -4,14 +4,14 @@
 
 namespace v2::relay {
 
-RelayHandler::RelayHandler(uint8_t type,
+RelayHandler::RelayHandler(const uint8_t type,
                            const IUserRepository& users,
                            const net::ISenderStamp& stamp,
                            net::IBroadcaster& broadcaster,
                            ILogger& logger)
     : type_(type), users_(users), stamp_(stamp), broadcaster_(broadcaster), logger_(logger) {}
 
-void RelayHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void RelayHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     if (!sender_id.has_value()) {
         logger_.warn(std::format("[Relay] type={:#04x} from unknown sender, dropped", type_));

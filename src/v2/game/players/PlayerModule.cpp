@@ -15,7 +15,7 @@ net::ModuleBindings PlayerModule::bindings() {
     return {.observers = {*tracker_}};
 }
 
-IPlayerState& PlayerModule::state() {
+IPlayerState& PlayerModule::state() const {
     return *state_;
 }
 

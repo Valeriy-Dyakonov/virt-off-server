@@ -18,7 +18,7 @@ struct IManifestReader {
 
     /// Returns the descriptors up to the first truncated one, or nullopt if
     /// even the header is truncated.
-    virtual std::optional<std::vector<PropDescriptor>> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<std::vector<PropDescriptor>> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::game

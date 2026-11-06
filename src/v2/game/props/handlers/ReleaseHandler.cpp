@@ -20,7 +20,7 @@ ReleaseHandler::ReleaseHandler(const IUserRepository& users,
     , broadcaster_(broadcaster)
     , logger_(logger) {}
 
-void ReleaseHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void ReleaseHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     if (!sender_id.has_value()) {
         return;

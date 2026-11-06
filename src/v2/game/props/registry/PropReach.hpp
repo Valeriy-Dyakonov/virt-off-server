@@ -13,7 +13,7 @@ class PropReach final : public IPropReach {
 public:
     PropReach(const IPlayerState& players, const IPropRepository& props, ILogger& logger);
 
-    bool within_reach(const std::string& player_id, uint32_t prop_id) const override;
+    [[nodiscard]] bool within_reach(const std::string& player_id, uint32_t prop_id) const override;
 
 private:
     const IPlayerState& players_;

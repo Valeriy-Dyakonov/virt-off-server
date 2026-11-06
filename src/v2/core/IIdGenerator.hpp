@@ -17,7 +17,7 @@ struct IIdGenerator {
     /// When two calls land in the same millisecond, a disambiguating suffix
     /// is appended so the result stays unique. Never repeats within the
     /// process lifetime.
-    virtual std::string next() = 0;
+    [[nodiscard]] virtual std::string next() = 0;
 };
 
 }  // namespace v2

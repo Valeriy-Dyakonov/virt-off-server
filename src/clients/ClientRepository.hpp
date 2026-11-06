@@ -12,13 +12,13 @@
 /// Thread-safety: не требуется — вызывается только на strand транспорта.
 class ClientRepository final : public IClientRepository {
 public:
-    uint64_t add(udp::endpoint ep) override;
+    uint64_t add(const udp::endpoint& ep) override;
 
     void remove(uint64_t id) override;
 
-    std::optional<uint64_t> find_by_endpoint(const udp::endpoint& ep) const override;
+    [[nodiscard]] std::optional<uint64_t> find_by_endpoint(const udp::endpoint& ep) const override;
 
-    void for_each_except(uint64_t exclude_id, std::function<void(uint64_t, const udp::endpoint&)> fn) const override;
+    void for_each_except(uint64_t exclude_id, const Visitor& visit) const override;
 
 private:
     std::unordered_map<uint64_t, udp::endpoint> by_id_;

@@ -14,7 +14,7 @@ ManifestHandler::ManifestHandler(const IUserRepository& users,
                                  ILogger& logger)
     : users_(users), reader_(reader), props_(props), encoder_(encoder), broadcaster_(broadcaster), logger_(logger) {}
 
-void ManifestHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void ManifestHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     if (!sender_id.has_value()) {
         return;

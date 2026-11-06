@@ -22,7 +22,7 @@ PickupHandler::PickupHandler(const IUserRepository& users,
     , grants_(grants)
     , logger_(logger) {}
 
-void PickupHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void PickupHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     const auto prop_id = reader_.read(payload);
     if (!sender_id.has_value() || !prop_id.has_value() || !reach_.within_reach(*sender_id, *prop_id)) {

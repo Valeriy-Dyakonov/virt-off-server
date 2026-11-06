@@ -28,7 +28,7 @@ struct IPropStateReader {
     virtual ~IPropStateReader() = default;
 
     /// Returns the fields, or nullopt if the payload is truncated.
-    virtual std::optional<PropStateFields> read(std::span<const uint8_t> payload) const = 0;
+    [[nodiscard]] virtual std::optional<PropStateFields> read(std::span<const uint8_t> payload) const = 0;
 };
 
 }  // namespace v2::game

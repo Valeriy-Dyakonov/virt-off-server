@@ -17,7 +17,7 @@ struct IPlayerState {
     virtual void update(const std::string& id, const Vec3& position) = 0;
 
     /// Returns the latest position of `id`, or nullopt if none was reported.
-    virtual std::optional<Vec3> position(const std::string& id) const = 0;
+    [[nodiscard]] virtual std::optional<Vec3> position(const std::string& id) const = 0;
 
     /// Forgets `id` (the player left).
     virtual void erase(const std::string& id) = 0;

@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-int main(int argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
     const CliParser parser;
     const CliOptions opts = parser.parse(argc, argv);
 

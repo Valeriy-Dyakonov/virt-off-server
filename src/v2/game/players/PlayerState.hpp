@@ -12,7 +12,7 @@ class PlayerState final : public IPlayerState {
 public:
     void update(const std::string& id, const Vec3& position) override;
 
-    std::optional<Vec3> position(const std::string& id) const override;
+    [[nodiscard]] std::optional<Vec3> position(const std::string& id) const override;
 
     void erase(const std::string& id) override;
 

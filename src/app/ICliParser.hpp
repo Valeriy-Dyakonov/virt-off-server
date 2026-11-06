@@ -15,5 +15,5 @@ struct ICliParser {
     /// @param argc argument count as passed to main (>= 0)
     /// @param argv argument vector as passed to main; argv[0] is the program name
     /// @return fully populated options with defaults for absent/invalid values
-    virtual CliOptions parse(int argc, char* argv[]) const = 0;
+    [[nodiscard]] virtual CliOptions parse(int argc, char* argv[]) const = 0;
 };

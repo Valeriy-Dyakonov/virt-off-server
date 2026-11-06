@@ -28,7 +28,7 @@ namespace {
 
 int failures = 0;
 
-void check(bool condition, const std::string& label) {
+void check(const bool condition, const std::string& label) {
     std::cout << (condition ? "PASS: " : "FAIL: ") << label << '\n';
     if (!condition) {
         ++failures;
@@ -41,17 +41,17 @@ void append_string(std::vector<uint8_t>& bytes, const std::string& value) {
 }
 
 template <typename T>
-void append_raw(std::vector<uint8_t>& bytes, T value) {
+void append_raw(std::vector<uint8_t>& bytes, const T value) {
     std::array<uint8_t, sizeof(T)> raw{};
     std::memcpy(raw.data(), &value, sizeof(T));
     bytes.insert(bytes.end(), raw.begin(), raw.end());
 }
 
-void append_u32(std::vector<uint8_t>& bytes, uint32_t value) {
+void append_u32(std::vector<uint8_t>& bytes, const uint32_t value) {
     append_raw(bytes, value);
 }
 
-void append_floats(std::vector<uint8_t>& bytes, std::initializer_list<float> values) {
+void append_floats(std::vector<uint8_t>& bytes, const std::initializer_list<float> values) {
     for (const float value : values) {
         append_raw(bytes, value);
     }
@@ -63,7 +63,7 @@ v2::game::PropRepository make_repository() {
     std::vector<v2::game::PropDescriptor> manifest(2);
     manifest[0].key = "Chair";
     manifest[1].key = "Table";
-    repo.register_manifest(manifest);
+    check(repo.register_manifest(manifest) == std::vector<uint32_t>{1, 2}, "manifest: ids assigned in order");
     return repo;
 }
 

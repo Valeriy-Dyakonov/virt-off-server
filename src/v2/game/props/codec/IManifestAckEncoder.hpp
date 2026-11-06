@@ -12,7 +12,7 @@ struct IManifestAckEncoder {
     virtual ~IManifestAckEncoder() = default;
 
     /// `prop_ids` in the order of the client manifest.
-    virtual std::vector<uint8_t> encode(const std::vector<uint32_t>& prop_ids) const = 0;
+    [[nodiscard]] virtual std::vector<uint8_t> encode(const std::vector<uint32_t>& prop_ids) const = 0;
 };
 
 }  // namespace v2::game

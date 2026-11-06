@@ -17,7 +17,7 @@ NameHandler::NameHandler(IUserRepository& users,
     , roster_(roster)
     , logger_(logger) {}
 
-void NameHandler::handle(const asio::ip::udp::endpoint& from, std::span<const uint8_t> payload) {
+void NameHandler::handle(const asio::ip::udp::endpoint& from, const std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
     const auto raw = reader_.read(payload);
     const auto name = raw.has_value() ? sanitizer_.sanitize(*raw) : std::nullopt;

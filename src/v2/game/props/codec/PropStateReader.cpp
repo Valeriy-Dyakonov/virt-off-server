@@ -5,7 +5,7 @@
 
 namespace v2::game {
 
-std::optional<PropStateFields> PropStateReader::read(std::span<const uint8_t> payload) const {
+std::optional<PropStateFields> PropStateReader::read(const std::span<const uint8_t> payload) const {
     net::WireReader reader(payload);
     reader.skip_str();
 

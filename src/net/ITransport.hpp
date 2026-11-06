@@ -22,7 +22,7 @@ struct ITransport {
     virtual ~ITransport() = default;
 
     /// Binds the socket to `local` and starts receiving. Throws std::system_error on failure.
-    virtual void start(udp::endpoint local) = 0;
+    virtual void start(const udp::endpoint& local) = 0;
 
     /// Queues `data` for sending to `dest`. Non-blocking; send errors are dropped.
     virtual void send_to(const udp::endpoint& dest, std::span<const uint8_t> data) = 0;

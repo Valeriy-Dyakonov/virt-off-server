@@ -3,10 +3,9 @@
 #include "net/ProtocolConstants.hpp"
 
 #include <format>
-#include <string>
 #include <utility>
 
-Server::Server(ServerDependencies deps, uint16_t port) : deps_(std::move(deps)), port_(port) {}
+Server::Server(ServerDependencies deps, const uint16_t port) : deps_(std::move(deps)), port_(port) {}
 
 Server::~Server() {
     Stop();

@@ -5,7 +5,7 @@
 
 namespace v2::net {
 
-std::optional<std::vector<uint8_t>> SenderStamp::stamp(std::span<const uint8_t> payload,
+std::optional<std::vector<uint8_t>> SenderStamp::stamp(const std::span<const uint8_t> payload,
                                                        const std::string& sender_id) const {
     WireReader reader(payload);
     reader.skip_str();

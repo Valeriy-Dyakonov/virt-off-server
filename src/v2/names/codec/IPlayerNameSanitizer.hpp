@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -19,7 +18,7 @@ struct IPlayerNameSanitizer {
     /// Drops control characters and invalid UTF-8, trims surrounding spaces and
     /// cuts the name to kMaxPlayerNameBytes without splitting a character.
     /// Returns nullopt if nothing is left.
-    virtual std::optional<std::string> sanitize(std::string_view raw) const = 0;
+    [[nodiscard]] virtual std::optional<std::string> sanitize(std::string_view raw) const = 0;
 };
 
 }  // namespace v2::names

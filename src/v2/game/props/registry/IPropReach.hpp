@@ -14,7 +14,7 @@ struct IPropReach {
     /// True if `player_id` is within kPropReachDistance of `prop_id`. A prop
     /// without a reported position yet is reachable; an unknown prop or a
     /// player without a known position is not.
-    virtual bool within_reach(const std::string& player_id, uint32_t prop_id) const = 0;
+    [[nodiscard]] virtual bool within_reach(const std::string& player_id, uint32_t prop_id) const = 0;
 };
 
 }  // namespace v2::game

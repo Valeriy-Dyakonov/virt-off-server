@@ -5,11 +5,11 @@
 
 #include <memory>
 
-ServerFactory::ServerFactory(asio::io_context& io_ctx, uint16_t port)
+ServerFactory::ServerFactory(asio::io_context& io_ctx, const uint16_t port)
     : legacy_(std::make_unique<ServerBuilder>(io_ctx, port))
     , next_(std::make_unique<v2::ServerBuilder>(io_ctx, port)) {}
 
-std::unique_ptr<IServer> ServerFactory::create(ApiVersion version) {
+std::unique_ptr<IServer> ServerFactory::create(const ApiVersion version) {
     switch (version) {
         case ApiVersion::V1: {
             return legacy_->build();
