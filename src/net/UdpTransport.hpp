@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/ConsoleLogger.hpp"
+#include "core/ILogger.hpp"
 #include "net/ITransport.hpp"
 
 #include <array>
@@ -9,48 +9,48 @@
 #include <asio/strand.hpp>
 #include <memory>
 
+/// ITransport over an asio UDP socket. Receives, sends and ticks are
+/// serialised on one strand, so callbacks never run concurrently.
 class UdpTransport final : public ITransport {
 public:
-    explicit UdpTransport(asio::io_context& io_ctx)
-        : io_ctx_(io_ctx), strand_(asio::make_strand(io_ctx)), socket_(io_ctx) {
-        logger_->info("UdpTransport created");
-    }
+    UdpTransport(asio::io_context& io_ctx, ILogger& logger);
 
     void start(udp::endpoint local) override;
 
     void send_to(const udp::endpoint& dest, std::span<const uint8_t> data) override;
 
-    void set_receive_callback(std::function<void(udp::endpoint, std::vector<uint8_t>)> on_packet) override;
+    void set_receive_callback(ReceiveCallback on_packet) override;
 
-    void set_tick_callback(std::function<void()> callback, unsigned int interval_ms) override;
+    void set_tick_callback(TickCallback callback, unsigned int interval_ms) override;
 
     void stop() override;
 
 private:
+    /// Largest datagram the server accepts; longer ones are truncated by the OS.
+    static constexpr size_t kReceiveBufferBytes = 4096;
+
+    using ReceiveBuffer = std::array<uint8_t, kReceiveBufferBytes>;
+
+    /// Queues the next asynchronous receive.
     void async_receive();
 
-    /// Reschedules the tick timer for the next interval.
+    /// Re-arms the tick timer for the next interval.
     void schedule_tick();
 
     asio::io_context& io_ctx_;
 
+    ILogger& logger_;
+
     asio::strand<asio::io_context::executor_type> strand_;
 
-    asio::ip::udp::socket socket_;
+    udp::socket socket_;
 
-    std::function<void(udp::endpoint, std::vector<uint8_t>)> on_packet_;
+    ReceiveCallback on_packet_;
 
-    /// Tick timer for periodic callbacks (session sweep).
+    /// Created on start() when a tick callback is set.
     std::unique_ptr<asio::steady_timer> tick_timer_;
 
-    /// Callback invoked periodically by the tick timer.
-    std::function<void()> on_tick_;
+    TickCallback on_tick_;
 
-    /// Tick interval in milliseconds.
     unsigned int tick_interval_ms_{};
-
-    static constexpr size_t recv_buf_size = 4096;
-    using RecvBuffer = std::array<uint8_t, recv_buf_size>;
-
-    static inline ILogger* logger_ = new ConsoleLogger();
 };

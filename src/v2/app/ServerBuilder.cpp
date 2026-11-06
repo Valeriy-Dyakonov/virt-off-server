@@ -1,26 +1,18 @@
 #include "v2/app/ServerBuilder.hpp"
 
+#include "core/ConsoleLogger.hpp"
 #include "net/PacketRouter.hpp"
 #include "net/UdpTransport.hpp"
 #include "v2/app/Server.hpp"
 #include "v2/clients/UserRepository.hpp"
-#include "v2/core/TimestampIdGenerator.hpp"
-#include "v2/game/AttackGate.hpp"
-#include "v2/game/AttackHandler.hpp"
-#include "v2/game/BroadcastHandler.hpp"
-#include "v2/game/GameOrchestrator.hpp"
-#include "v2/game/ManifestHandler.hpp"
-#include "v2/game/PickupHandler.hpp"
-#include "v2/game/PlayerState.hpp"
-#include "v2/game/PositionReader.hpp"
-#include "v2/game/PropRepository.hpp"
-#include "v2/game/PropStateHandler.hpp"
-#include "v2/game/ReleaseHandler.hpp"
-#include "v2/game/SessionMonitor.hpp"
-#include "v2/game/SessionTerminator.hpp"
-#include "v2/handlers/ConnectHandler.hpp"
-#include "v2/handlers/RelayHandler.hpp"
-#include "v2/handlers/SenderStamp.hpp"
+#include "v2/game/combat/CombatModule.hpp"
+#include "v2/game/players/PlayerModule.hpp"
+#include "v2/game/props/PropModule.hpp"
+#include "v2/game/session/SessionModule.hpp"
+#include "v2/names/NameModule.hpp"
+#include "v2/net/broadcast/Broadcaster.hpp"
+#include "v2/net/wire/SenderStamp.hpp"
+#include "v2/relay/RelayModule.hpp"
 
 #include <memory>
 
@@ -29,61 +21,34 @@ namespace v2 {
 ServerBuilder::ServerBuilder(asio::io_context& io_ctx, uint16_t port) : io_ctx_(io_ctx), port_(port) {}
 
 std::unique_ptr<IServer> ServerBuilder::build() {
-    auto id_gen = std::make_unique<TimestampIdGenerator>();
-    auto users = std::make_unique<UserRepository>();
-    auto transport = std::make_unique<UdpTransport>(io_ctx_);
-    auto router = std::make_unique<PacketRouter>();
-    auto connect = std::make_unique<ConnectHandler>(*id_gen, *users, *transport);
-    auto sender_stamp = std::make_unique<SenderStamp>();
-    auto relay = std::make_unique<RelayHandler>(*users, *transport, *sender_stamp);
+    ServerComponents c;
+    c.logger = std::make_unique<ConsoleLogger>();
+    c.users = std::make_unique<UserRepository>();
+    c.transport = std::make_unique<UdpTransport>(io_ctx_, *c.logger);
+    c.router = std::make_unique<PacketRouter>();
+    c.broadcaster = std::make_unique<net::Broadcaster>(*c.users, *c.transport);
+    c.sender_stamp = std::make_unique<net::SenderStamp>();
 
-    // Build the game orchestrator.
-    namespace game = v2::game;
-    auto player_state = std::make_unique<game::PlayerState>();
-    auto prop_repo = std::make_unique<game::PropRepository>();
-    auto attack_gate = std::make_unique<game::AttackGate>(*player_state);
-    auto broadcast_handler = std::make_unique<game::BroadcastHandler>(*users, *transport);
-    auto session_terminator =
-        std::make_unique<game::SessionTerminator>(*users, *prop_repo, *player_state, *broadcast_handler);
-    auto session_monitor = std::make_unique<game::SessionMonitor>(*users, *session_terminator);
+    ILogger& logger = *c.logger;
+    IUserRepository& users = *c.users;
+    net::IBroadcaster& broadcaster = *c.broadcaster;
+    const net::ISenderStamp& stamp = *c.sender_stamp;
 
-    auto manifest_handler = std::make_unique<game::ManifestHandler>(*users, *prop_repo, *broadcast_handler);
-    auto pickup_handler = std::make_unique<game::PickupHandler>(*users, *prop_repo, *player_state, *broadcast_handler);
-    auto release_handler = std::make_unique<game::ReleaseHandler>(*users, *prop_repo, *broadcast_handler);
-    auto prop_state_handler =
-        std::make_unique<game::PropStateHandler>(*users, *prop_repo, *broadcast_handler, *sender_stamp);
-    auto attack_handler =
-        std::make_unique<game::AttackHandler>(*users, *attack_gate, *broadcast_handler, *sender_stamp);
+    auto players = std::make_unique<game::PlayerModule>(users);
+    auto props = std::make_unique<game::PropModule>(users, players->state(), stamp, broadcaster, logger);
+    auto session =
+        std::make_unique<game::SessionModule>(users, players->state(), props->releaser(), broadcaster, logger);
+    auto combat = std::make_unique<game::CombatModule>(users, players->state(), stamp, broadcaster, logger);
 
-    auto orchestrator = std::make_unique<game::GameOrchestrator>(
-        game::GameOrchestrator::Builder{}
-            .with_player_state(std::move(player_state))
-            .with_prop_repository(std::move(prop_repo))
-            .with_attack_gate(std::move(attack_gate))
-            .with_broadcast_handler(std::move(broadcast_handler))
-            .with_session_monitor(std::move(session_monitor))
-            .with_manifest_handler(std::move(manifest_handler))
-            .with_pickup_handler(std::move(pickup_handler))
-            .with_release_handler(std::move(release_handler))
-            .with_prop_state_handler(std::move(prop_state_handler))
-            .with_attack_handler(std::move(attack_handler))
-            .with_session_terminator(std::move(session_terminator))
-            .with_position_reader(std::make_unique<game::PositionReader>())
-            .build());
+    // Dependencies first: modules are destroyed in reverse order.
+    c.modules.push_back(std::move(players));
+    c.modules.push_back(std::move(props));
+    c.modules.push_back(std::move(session));
+    c.modules.push_back(std::move(combat));
+    c.modules.push_back(std::make_unique<names::NameModule>(users, broadcaster, logger));
+    c.modules.push_back(std::make_unique<relay::RelayModule>(users, stamp, broadcaster, logger));
 
-    ServerDependencies deps{
-        .io_ctx = nullptr,
-        .id_generator = std::move(id_gen),
-        .user_repository = std::move(users),
-        .transport = std::move(transport),
-        .router = std::move(router),
-        .connect_handler = std::move(connect),
-        .relay_handler = std::move(relay),
-        .sender_stamp = std::move(sender_stamp),
-        .game_orchestrator = std::move(orchestrator),
-    };
-
-    return std::make_unique<Server>(std::move(deps), port_);
+    return std::make_unique<Server>(std::move(c), port_);
 }
 
 }  // namespace v2

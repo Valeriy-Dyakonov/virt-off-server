@@ -1,6 +1,6 @@
 #pragma once
 
-#include "clients/UserInfo.hpp"
+#include "v2/clients/UserInfo.hpp"
 
 #include <chrono>
 #include <functional>
@@ -9,49 +9,38 @@
 
 namespace v2 {
 
-using asio::ip::udp;
-
-/// Registry of connected clients keeping full UserInfo records.
+/// Registry of connected clients, indexed by id and by endpoint.
 ///
-/// Two indexes: by string id and by udp::endpoint, so both "who is this
-/// endpoint" and "where to send to this id" are O(1). Separate from the
-/// legacy ::IClientRepository (endpoint-only, numeric ids).
-///
-/// Thread-safety: REQUIRED — implementation must guard both indexes.
+/// Thread-safety: REQUIRED — the implementation guards both indexes.
 struct IUserRepository {
+    /// Visitor of a user snapshot; may call back into the repository.
+    using Visitor = std::function<void(const UserInfo&)>;
+
     virtual ~IUserRepository() = default;
 
-    /// Stores `user`. An entry with the same id or endpoint is replaced.
+    /// Stores `user`, replacing an entry with the same id or endpoint.
     virtual void add(UserInfo user) = 0;
 
-    /// Removes the user with `id`. Unknown id is a no-op.
+    /// Removes the user `id`; unknown ids are ignored.
     virtual void remove(const std::string& id) = 0;
 
-    /// Returns a copy of the user with `id`, or std::nullopt if not found.
+    /// Returns a copy of the user `id`, or nullopt.
     virtual std::optional<UserInfo> find_by_id(const std::string& id) const = 0;
 
-    /// Returns the id bound to `endpoint`, or std::nullopt if not found.
-    virtual std::optional<std::string> find_id_by_endpoint(const udp::endpoint& endpoint) const = 0;
+    /// Returns the id bound to `endpoint`, or nullopt.
+    virtual std::optional<std::string> find_id_by_endpoint(const asio::ip::udp::endpoint& endpoint) const = 0;
 
-    /// Updates `last_seen` of the user with `id` to `now`. Unknown id: no-op.
-    virtual void touch(const std::string& id, std::chrono::system_clock::time_point now) = 0;
+    /// Sets `last_seen` of the user `id`; unknown ids are ignored.
+    virtual void touch(const std::string& id, std::chrono::steady_clock::time_point now) = 0;
 
-    /// Sets `username` of the user with `id`. Unknown id: no-op.
+    /// Sets `username` of the user `id`; unknown ids are ignored.
     virtual void set_username(const std::string& id, std::string username) = 0;
 
-    /// Invokes `fn` for every user whose id != `exclude_id` (relay broadcast).
-    virtual void for_each_except(const std::string& exclude_id,
-                                 const std::function<void(const UserInfo&)>& fn) const = 0;
+    /// Calls `visit` for every user except `excluded_id`, outside the lock.
+    virtual void for_each_except(const std::string& excluded_id, const Visitor& visit) const = 0;
 
-    /// Invokes `fn` for every user (unlike for_each_except — no exclusion).
-    virtual void for_each(const std::function<void(const UserInfo&)>& fn) const = 0;
-
-    /// Removes all users whose `last_seen` is older than `now - timeout`.
-    virtual void remove_idle(std::chrono::system_clock::time_point now,
-                             std::chrono::seconds timeout) = 0;
-
-    /// Returns the number of connected users.
-    virtual size_t size() const = 0;
+    /// Calls `visit` for every user, outside the lock.
+    virtual void for_each(const Visitor& visit) const = 0;
 };
 
 }  // namespace v2

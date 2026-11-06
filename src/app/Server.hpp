@@ -1,31 +1,20 @@
 #pragma once
 
+#include "app/IServer.hpp"
 #include "clients/IClientRepository.hpp"
-#include "core/ConsoleLogger.hpp"
-#include "core/IIdGenerator.hpp"
+#include "core/ILogger.hpp"
 #include "handlers/IConnectHandler.hpp"
 #include "handlers/IRelayHandler.hpp"
 #include "net/IPacketRouter.hpp"
 #include "net/ITransport.hpp"
 
-#include <asio/io_context.hpp>
+#include <cstdint>
 #include <memory>
 
-struct IServer {
-    virtual ~IServer() = default;
-
-    /// Sets up handlers and starts listening on the configured port.
-    /// Does NOT block — returns immediately after wiring completes.
-    virtual void Start() = 0;
-
-    /// Signals graceful shutdown: closes transport, stops the event loop.
-    virtual void Stop() noexcept = 0;
-};
-
+/// Everything the legacy server owns. Members are destroyed in reverse order,
+/// so dependents are declared after their dependencies.
 struct ServerDependencies {
-    std::unique_ptr<asio::io_context> io_ctx;
-
-    std::unique_ptr<IIdGenerator> id_generator;
+    std::unique_ptr<ILogger> logger;
 
     std::unique_ptr<IClientRepository> client_repository;
 
@@ -38,6 +27,7 @@ struct ServerDependencies {
     std::unique_ptr<IRelayHandler> relay_handler;
 };
 
+/// Legacy (V1) server: numeric ids, relays VOICE and POSITION as-is.
 class Server final : public IServer {
 public:
     Server(ServerDependencies deps, uint16_t port);
@@ -54,21 +44,7 @@ public:
     void Stop() noexcept override;
 
 private:
-    std::unique_ptr<asio::io_context> io_ctx_;
-
-    std::unique_ptr<IIdGenerator> id_generator_;
-
-    std::unique_ptr<IClientRepository> client_repository_;
-
-    std::unique_ptr<ITransport> transport_;
-
-    std::unique_ptr<IPacketRouter> router_;
-
-    std::unique_ptr<IConnectHandler> connect_handler_;
-
-    std::unique_ptr<IRelayHandler> relay_handler_;
+    ServerDependencies deps_;
 
     uint16_t port_;
-
-    static inline ILogger* logger_ = new ConsoleLogger();
 };

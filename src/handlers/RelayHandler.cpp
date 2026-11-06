@@ -1,22 +1,22 @@
 #include "handlers/RelayHandler.hpp"
 
-RelayHandler::RelayHandler(IClientRepository& clients, ITransport& transport)
-    : clients_(clients), transport_(transport) {
-    logger_->info("RelayHandler initialized");
-}
+#include <vector>
+
+RelayHandler::RelayHandler(IClientRepository& clients, ITransport& transport, ILogger& logger)
+    : clients_(clients), transport_(transport), logger_(logger) {}
 
 void RelayHandler::relay(uint8_t type, const udp::endpoint& sender, std::span<const uint8_t> data) {
-    auto sender_id = clients_.find_by_endpoint(sender);
+    const auto sender_id = clients_.find_by_endpoint(sender);
     if (!sender_id.has_value()) {
-        logger_->warn("Relay from unknown sender, dropping");
+        logger_.warn("Relay from unknown sender, dropping");
         return;
     }
 
-    std::vector<uint8_t> outgoing(1 + data.size());
-    outgoing[0] = type;
-    std::memcpy(outgoing.data() + 1, data.data(), data.size());
+    std::vector<uint8_t> outgoing;
+    outgoing.reserve(1 + data.size());
+    outgoing.push_back(type);
+    outgoing.insert(outgoing.end(), data.begin(), data.end());
 
-    uint64_t sender_val = *sender_id;
-    clients_.for_each_except(
-        sender_val, [this, &outgoing](uint64_t /*id*/, const udp::endpoint& ep) { transport_.send_to(ep, outgoing); });
+    clients_.for_each_except(*sender_id,
+                             [this, &outgoing](uint64_t, const udp::endpoint& ep) { transport_.send_to(ep, outgoing); });
 }

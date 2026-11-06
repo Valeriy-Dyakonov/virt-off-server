@@ -6,10 +6,10 @@ using asio::ip::udp;
 
 /// Handles initial client connection (control byte 0xFF).
 ///
-/// On connect: assigns a new client ID via IIdGenerator, stores the client
-/// endpoint in IClientRepository, and sends the ID back as a 0xFE packet.
+/// On connect: registers the endpoint in IClientRepository (which assigns the
+/// id) and sends the id back as a 0xFE packet.
 ///
-/// Thread-safety: NOT required — called from the io_context thread only.
+/// Thread-safety: NOT required — called on the transport strand only.
 struct IConnectHandler {
     virtual ~IConnectHandler() = default;
 

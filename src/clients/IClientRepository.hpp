@@ -9,9 +9,7 @@ using asio::ip::udp;
 
 /// Registry of all currently connected clients.
 ///
-/// Thread-safety: NOT required — called from the io_context thread only.
-/// Future: must become thread-safe (mutex or concurrent map) when multiple
-/// threads run io_context.
+/// Thread-safety: NOT required — called on the transport strand only.
 struct IClientRepository {
     virtual ~IClientRepository() = default;
 

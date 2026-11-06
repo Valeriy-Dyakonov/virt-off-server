@@ -13,7 +13,7 @@ inline constexpr uint8_t MSG_CONNECT = 0xFF;
 
 /// 0xFE — server → client: assigned client ID.
 /// V1 payload: 8-byte native-endian uint64 id.
-/// V2 payload: UTF-8 string id (see ConnectHandlerV2).
+/// V2 payload: UTF-8 string id, no length prefix (see v2::game::ConnectHandler).
 inline constexpr uint8_t MSG_ASSIGN_ID = 0xFE;
 
 /// 0x01 — client → server → other clients: voice packet (Opus), relayed as-is.
@@ -46,7 +46,8 @@ inline constexpr uint8_t MSG_MANIFEST_ACK = 0x09;
 /// 0x0A — S→all: prop granted to a holder.
 inline constexpr uint8_t MSG_PROP_GRANT = 0x0A;
 
-/// 0x0B — S→all: prop released (owner empty → FREE).
+/// 0x0B — S→all: prop released. Owner empty → FREE; owner set → that player
+/// threw it and keeps simulating it until it settles.
 inline constexpr uint8_t MSG_PROP_RELEASE_EVENT = 0x0B;
 
 /// 0x0C — S→C: full prop ownership snapshot on join.
@@ -57,5 +58,15 @@ inline constexpr uint8_t MSG_DISCONNECT = 0x0D;
 
 /// 0x0E — S→others: a player left (DISCONNECT or idle timeout). Payload: [id:str].
 inline constexpr uint8_t MSG_PLAYER_LEFT = 0x0E;
+
+/// 0x0F — C→S: the client pushed or hit a free prop and asks to simulate it.
+/// Payload: [id:str][propId:4]. Answered with PROP_GRANT (flags: kGrantFlagSimulate).
+inline constexpr uint8_t MSG_PROP_PUSH = 0x0F;
+
+/// 0x10 — C→S: the player's display name. Payload: [id:str][name:str].
+inline constexpr uint8_t MSG_SET_NAME = 0x10;
+
+/// 0x11 — S→C: a player's display name. Payload: [id:str][name:str].
+inline constexpr uint8_t MSG_PLAYER_NAME = 0x11;
 
 }  // namespace protocol

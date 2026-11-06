@@ -1,54 +1,47 @@
 #pragma once
 
-#include "app/Server.hpp"
-#include "core/ConsoleLogger.hpp"
+#include "app/IServer.hpp"
+#include "core/ILogger.hpp"
 #include "net/IPacketRouter.hpp"
 #include "net/ITransport.hpp"
 #include "v2/clients/IUserRepository.hpp"
-#include "v2/core/IIdGenerator.hpp"
-#include "v2/game/GameOrchestrator.hpp"
-#include "v2/game/PropRecord.hpp"
-#include "v2/handlers/IConnectHandler.hpp"
-#include "v2/handlers/IRelayHandler.hpp"
-#include "v2/handlers/ISenderStamp.hpp"
+#include "v2/net/broadcast/IBroadcaster.hpp"
+#include "v2/net/module/IPacketObserver.hpp"
+#include "v2/net/module/IPeriodicTask.hpp"
+#include "v2/net/module/IServerModule.hpp"
+#include "v2/net/wire/ISenderStamp.hpp"
 
-#include <asio/io_context.hpp>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <vector>
 
 namespace v2 {
 
-/// Dependencies of the V2 server, mirroring the legacy ServerDependencies.
-///
-/// io_ctx may be null: the caller owns the event loop and is responsible for
-/// stopping it. When set, the server stops it on Stop().
-struct ServerDependencies {
-    std::unique_ptr<asio::io_context> io_ctx;
+/// Everything the V2 server owns. Members are destroyed in reverse order, so
+/// each one is declared after what it depends on; modules depend on the
+/// shared services and on earlier modules.
+struct ServerComponents {
+    std::unique_ptr<ILogger> logger;
 
-    std::unique_ptr<IIdGenerator> id_generator;
-
-    std::unique_ptr<IUserRepository> user_repository;
+    std::unique_ptr<IUserRepository> users;
 
     std::unique_ptr<ITransport> transport;
 
     std::unique_ptr<IPacketRouter> router;
 
-    std::unique_ptr<IConnectHandler> connect_handler;
+    std::unique_ptr<net::IBroadcaster> broadcaster;
 
-    std::unique_ptr<IRelayHandler> relay_handler;
+    std::unique_ptr<net::ISenderStamp> sender_stamp;
 
-    /// Rewrites sender ids in relayed payloads; referenced by the relay and game handlers.
-    std::unique_ptr<ISenderStamp> sender_stamp;
-
-    /// Game-logic orchestrator (prop management, attacks, session monitor).
-    std::unique_ptr<game::GameOrchestrator> game_orchestrator;
+    std::vector<std::unique_ptr<net::IServerModule>> modules;
 };
 
-/// V2 composition root: registers V2 handlers on the router and runs the
-/// transport. Implements the version-agnostic ::IServer.
+/// V2 server: plugs the modules' routes, observers and periodic tasks into
+/// the transport. Holds no game logic of its own.
 class Server final : public IServer {
 public:
-    Server(ServerDependencies deps, uint16_t port);
+    Server(ServerComponents components, uint16_t port);
 
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
@@ -62,27 +55,19 @@ public:
     void Stop() noexcept override;
 
 private:
-    std::unique_ptr<asio::io_context> io_ctx_;
+    /// Runs the observers on `datagram`, then routes it.
+    void on_datagram(const udp::endpoint& from, const std::vector<uint8_t>& datagram);
 
-    std::unique_ptr<IIdGenerator> id_generator_;
+    /// Runs every periodic task.
+    void on_tick();
 
-    std::unique_ptr<IUserRepository> user_repository_;
-
-    std::unique_ptr<ITransport> transport_;
-
-    std::unique_ptr<IPacketRouter> router_;
-
-    std::unique_ptr<IConnectHandler> connect_handler_;
-
-    std::unique_ptr<IRelayHandler> relay_handler_;
-
-    std::unique_ptr<ISenderStamp> sender_stamp_;
-
-    std::unique_ptr<game::GameOrchestrator> game_orchestrator_;
+    ServerComponents components_;
 
     uint16_t port_;
 
-    static inline ILogger* logger_ = new ConsoleLogger();
+    std::vector<std::reference_wrapper<net::IPacketObserver>> observers_;
+
+    std::vector<std::reference_wrapper<net::IPeriodicTask>> tasks_;
 };
 
 }  // namespace v2

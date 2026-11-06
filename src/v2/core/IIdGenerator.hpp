@@ -6,8 +6,7 @@ namespace v2 {
 
 /// Client-ID generator producing human-readable string identifiers.
 ///
-/// Returns ids such as "player-<timestamp>". Separate from the legacy
-/// ::IIdGenerator (numeric); lives in namespace v2 for versioning.
+/// Returns ids such as "player-<timestamp>".
 ///
 /// Thread-safety: REQUIRED — may be called concurrently from multiple
 /// io_context worker threads (see main.cpp).

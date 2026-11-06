@@ -8,31 +8,31 @@
 
 using asio::ip::udp;
 
-/// Low-level UDP socket wrapper.
+/// UDP socket wrapper.
 ///
-/// All socket operations (receive, send) are serialized through an internal
-/// asio::strand so the implementation is safe to use from multiple threads
-/// calling io_context::run(). Callbacks are always invoked on the strand.
-///
-/// Thread-safety: required — all public methods may be called from any thread.
+/// Thread-safety: REQUIRED — public methods may be called from any thread.
+/// Receive and tick callbacks are serialised: they never run concurrently.
 struct ITransport {
+    /// Called with the sender and the whole datagram (type byte included).
+    using ReceiveCallback = std::function<void(const udp::endpoint&, const std::vector<uint8_t>&)>;
+
+    /// Called every tick interval.
+    using TickCallback = std::function<void()>;
+
     virtual ~ITransport() = default;
 
-    /// Binds the UDP socket to `local` address.
+    /// Binds the socket to `local` and starts receiving. Throws std::system_error on failure.
     virtual void start(udp::endpoint local) = 0;
 
-    /// Sends raw bytes to `dest`. Non-blocking — queues an async send.
+    /// Queues `data` for sending to `dest`. Non-blocking; send errors are dropped.
     virtual void send_to(const udp::endpoint& dest, std::span<const uint8_t> data) = 0;
 
-    /// Sets a callback invoked on each received packet.
-    /// `on_packet(endpoint, payload)`
-    virtual void set_receive_callback(std::function<void(udp::endpoint, std::vector<uint8_t>)> on_packet) = 0;
+    /// Sets the callback for received datagrams. Call before start().
+    virtual void set_receive_callback(ReceiveCallback on_packet) = 0;
 
-    /// Registers a periodic timer callback on the transport strand.
-    /// `callback` is invoked on the strand every `interval_ms` milliseconds.
-    /// The timer is created lazily on the first call to `start()`.
-    virtual void set_tick_callback(std::function<void()> callback, unsigned int interval_ms) = 0;
+    /// Sets a callback run every `interval_ms`. Call before start(); the timer starts with it.
+    virtual void set_tick_callback(TickCallback callback, unsigned int interval_ms) = 0;
 
-    /// Closes the socket and cancels any outstanding async operations.
+    /// Closes the socket and cancels the timer and pending operations.
     virtual void stop() = 0;
 };

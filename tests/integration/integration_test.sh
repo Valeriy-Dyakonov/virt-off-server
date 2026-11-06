@@ -10,7 +10,9 @@
 #   - the relayed packet carries the sender's real id, not the one it claimed;
 #   - the sender does NOT receive its own relayed packet;
 #   - the listener is told PLAYER_LEFT after the sender disconnects;
-#   - an attack between two players with known positions reaches the target.
+#   - an attack between two players with known positions reaches the target;
+#   - a name sent with SET_NAME (padded with spaces) reaches the others trimmed,
+#     and a player that sets its name later receives the names set before.
 #
 # No framework: plain checks, non-zero exit on failure so CTest can report it.
 set -u
@@ -22,6 +24,8 @@ readonly PORT=39221
 readonly ID_PREFIX="CONNECTED player-"
 readonly VOICE_PAYLOAD="hello-voice"
 readonly SPOOFED_ID="spoofed-id"
+readonly SENDER_NAME="Tester"
+readonly LISTENER_NAME="Listener"
 
 FAILURES=0
 WORK_DIR="$(mktemp -d)"
@@ -69,14 +73,14 @@ check_absent() {
 SERVER_PID=$!
 sleep 1
 
-"$CLIENT_BIN" --port "$PORT" --position --listen 6 >"$WORK_DIR/listener.log" 2>&1 &
+"$CLIENT_BIN" --port "$PORT" --position --name "$LISTENER_NAME" --listen 8 >"$WORK_DIR/listener.log" 2>&1 &
 LISTENER_PID=$!
 sleep 1
 
 LISTENER_ID="$(grep -m1 "^CONNECTED " "$WORK_DIR/listener.log" | cut -d' ' -f2)"
 
 "$CLIENT_BIN" --port "$PORT" --send voice --payload "$VOICE_PAYLOAD" --claim "$SPOOFED_ID" \
-    --attack "$LISTENER_ID" --listen 2 --disconnect \
+    --attack "$LISTENER_ID" --name "  $SENDER_NAME  " --listen 4 --disconnect \
     >"$WORK_DIR/sender.log" 2>&1 &
 SENDER_PID=$!
 
@@ -92,6 +96,9 @@ check_absent "$WORK_DIR/listener.log" "$SPOOFED_ID" "listener: claimed sender id
 check_absent "$WORK_DIR/sender.log" "RECV VOICE" "sender: did not receive its own voice"
 check_contains "$WORK_DIR/listener.log" "RECV PLAYER_LEFT $SENDER_ID" "listener: told that the sender left"
 check_contains "$WORK_DIR/listener.log" "RECV ATTACK $SENDER_ID $LISTENER_ID" "listener: received the attack"
+check_contains "$WORK_DIR/listener.log" "RECV PLAYER_NAME $SENDER_ID $SENDER_NAME" "listener: received the trimmed sender name"
+check_contains "$WORK_DIR/sender.log" "RECV PLAYER_NAME $LISTENER_ID $LISTENER_NAME" "sender: received the earlier listener name"
+check_contains "$WORK_DIR/sender.log" "RECV PLAYER_NAME $SENDER_ID $SENDER_NAME" "sender: its own name is echoed"
 
 if [ "$FAILURES" -eq 0 ]; then
     echo "ALL INTEGRATION TESTS PASSED"

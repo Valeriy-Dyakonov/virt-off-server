@@ -1,14 +1,7 @@
 #include "v2/core/TimestampIdGenerator.hpp"
 
 #include <chrono>
-
-namespace {
-/// Prefix prepended to every generated id.
-constexpr const char* kPrefix = "player-";
-
-/// Separator between the timestamp and the same-millisecond disambiguator.
-constexpr const char* kSeparator = "-";
-}  // namespace
+#include <format>
 
 namespace v2 {
 
@@ -28,11 +21,10 @@ std::string TimestampIdGenerator::next() {
         same_millis_counter_ = 0;
     }
 
-    std::string id = std::string(kPrefix) + std::to_string(millis);
-    if (same_millis_counter_ > 0) {
-        id += std::string(kSeparator) + std::to_string(same_millis_counter_);
+    if (same_millis_counter_ == 0) {
+        return std::format("player-{}", millis);
     }
-    return id;
+    return std::format("player-{}-{}", millis, same_millis_counter_);
 }
 
 }  // namespace v2

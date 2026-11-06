@@ -6,11 +6,13 @@
 // Usage:
 //   test_client --port N [--host H] [--connect] [--send voice|position|none]
 //               [--payload TEXT] [--claim ID] [--repeat N] [--listen SECONDS]
-//               [--disconnect] [--position] [--attack TARGET_ID]
+//               [--disconnect] [--position] [--attack TARGET_ID] [--name NAME]
 //
 // --position sends POSITION at the origin right after connecting; --attack
 // does the same and then sends ATTACK at TARGET_ID (the server only lets it
 // through when both players' positions are known and close).
+//
+// --name sends SET_NAME with NAME right after connecting.
 //
 // Relayed packets are sent as [sender:str][payload]; --claim sets the sender
 // id written by the client (the server must replace it with the real one).
@@ -21,6 +23,7 @@
 //   RECV POSITION <sender> <payload>
 //   RECV PLAYER_LEFT <id>          when another player leaves
 //   RECV ATTACK <attacker> <target> on a relayed attack
+//   RECV PLAYER_NAME <id> <name>   on a player name announcement
 //   SENT ATTACK <target>           after sending the attack
 //   SENT <kind> <payload>          after sending to the server
 //   SENT DISCONNECT                after the graceful disconnect
@@ -66,6 +69,12 @@ constexpr std::size_t kAttackTailBytes = 25;
 /// Control byte: server -> others, a player left.
 constexpr uint8_t kMsgPlayerLeft = 0x0E;
 
+/// Control byte: client -> server, the player's display name.
+constexpr uint8_t kMsgSetName = 0x10;
+
+/// Control byte: server -> clients, a player's display name.
+constexpr uint8_t kMsgPlayerName = 0x11;
+
 /// Default number of seconds spent listening after connecting.
 constexpr int kDefaultListenSeconds = 3;
 
@@ -96,6 +105,7 @@ struct ClientOptions {
     bool disconnect = false;
     bool position = false;
     std::string attack_target;
+    std::string name;
 };
 
 /// Parses argv into ClientOptions; exits with usage on a missing --port.
@@ -121,6 +131,8 @@ ClientOptions parse_args(int argc, char* argv[]) {
         } else if (arg == "--attack" && has_value) {
             opts.attack_target = argv[++i];
             opts.position = true;
+        } else if (arg == "--name" && has_value) {
+            opts.name = argv[++i];
         } else if (arg == "--repeat" && has_value) {
             opts.repeat = std::atoi(argv[++i]);
         } else if (arg == "--listen" && has_value) {
@@ -188,6 +200,14 @@ std::vector<uint8_t> make_attack_datagram(const std::string& claim, const std::s
     return bytes;
 }
 
+/// SET_NAME: [type][sender:str][name:str].
+std::vector<uint8_t> make_set_name_datagram(const std::string& claim, const std::string& name) {
+    std::vector<uint8_t> bytes{kMsgSetName};
+    append_string(bytes, claim);
+    append_string(bytes, name);
+    return bytes;
+}
+
 /// Reads the [len:1][utf8] string at `offset`; empty if it does not fit.
 std::string read_string(const std::vector<uint8_t>& buf, std::size_t n, std::size_t offset) {
     if (offset >= n || offset + 1 + buf[offset] > n) {
@@ -229,6 +249,11 @@ void handle_datagram(const std::vector<uint8_t>& buf, std::size_t n) {
         const std::string attacker = read_string(buf, n, 1);
         const std::string target = read_string(buf, n, 2 + attacker.size() + 1);
         std::cout << "RECV ATTACK " << attacker << ' ' << target << '\n';
+        std::cout.flush();
+    } else if (buf[0] == kMsgPlayerName) {
+        const std::string id = read_string(buf, n, 1);
+        const std::string name = read_string(buf, n, 2 + id.size());
+        std::cout << "RECV PLAYER_NAME " << id << ' ' << name << '\n';
         std::cout.flush();
     } else if (buf[0] == kMsgPlayerLeft) {
         std::cout << "RECV PLAYER_LEFT " << read_string(buf, n, 1) << '\n';
@@ -298,6 +323,13 @@ int main(int argc, char* argv[]) {
     if (opts.position) {
         for (int i = 0; i < opts.repeat; ++i) {
             send_datagram(sock, server, make_position_datagram(opts.claim));
+            std::this_thread::sleep_for(std::chrono::milliseconds(kSendGapMs));
+        }
+    }
+
+    if (!opts.name.empty()) {
+        for (int i = 0; i < opts.repeat; ++i) {
+            send_datagram(sock, server, make_set_name_datagram(opts.claim, opts.name));
             std::this_thread::sleep_for(std::chrono::milliseconds(kSendGapMs));
         }
     }

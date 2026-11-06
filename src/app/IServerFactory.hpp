@@ -1,7 +1,7 @@
 #pragma once
 
 #include "app/ApiVersion.hpp"
-#include "app/Server.hpp"
+#include "app/IServer.hpp"
 
 #include <memory>
 

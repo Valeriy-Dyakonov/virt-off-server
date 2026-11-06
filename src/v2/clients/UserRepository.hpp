@@ -4,14 +4,11 @@
 
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace v2 {
 
-/// Thread-safe client registry keeping full UserInfo records.
-///
-/// Two indexes are kept in sync under a single mutex:
-///   by_id_       — id -> record, for direct send / lookup by id
-///   by_endpoint_ — endpoint -> id, for identifying the sender of a packet
+/// Thread-safe IUserRepository: both indexes are kept in sync under one mutex.
 class UserRepository final : public IUserRepository {
 public:
     void add(UserInfo user) override;
@@ -20,30 +17,27 @@ public:
 
     std::optional<UserInfo> find_by_id(const std::string& id) const override;
 
-    std::optional<std::string> find_id_by_endpoint(const udp::endpoint& endpoint) const override;
+    std::optional<std::string> find_id_by_endpoint(const asio::ip::udp::endpoint& endpoint) const override;
 
-    void touch(const std::string& id, std::chrono::system_clock::time_point now) override;
+    void touch(const std::string& id, std::chrono::steady_clock::time_point now) override;
 
     void set_username(const std::string& id, std::string username) override;
 
-    void for_each_except(const std::string& exclude_id, const std::function<void(const UserInfo&)>& fn) const override;
+    void for_each_except(const std::string& excluded_id, const Visitor& visit) const override;
 
-    void for_each(const std::function<void(const UserInfo&)>& fn) const override;
-
-    void remove_idle(std::chrono::system_clock::time_point now,
-                     std::chrono::seconds timeout) override;
-
-    size_t size() const override;
+    void for_each(const Visitor& visit) const override;
 
 private:
-    /// Guards both indexes.
+    /// Copies the users other than `excluded_id` under the lock.
+    std::vector<UserInfo> snapshot_except(const std::string& excluded_id) const;
+
     mutable std::mutex mutex_;
 
-    /// Primary index: id -> full record.
+    /// id → record.
     std::unordered_map<std::string, UserInfo> by_id_;
 
-    /// Secondary index: endpoint -> id.
-    std::unordered_map<udp::endpoint, std::string> by_endpoint_;
+    /// endpoint → id.
+    std::unordered_map<asio::ip::udp::endpoint, std::string> by_endpoint_;
 };
 
 }  // namespace v2

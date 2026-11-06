@@ -4,20 +4,12 @@
 
 #include <mutex>
 
-/// Логирует диагностические сообщения в stdout/stderr.
+/// ILogger writing "[info]"/"[warn]" lines to stdout and "[error]" lines to stderr.
 ///
-/// Каждое сообщение предваряется уровнем в квадратных скобках:
-///   [info], [warn], [error]
+/// Every line is flushed at once so the log survives a crash and reaches
+/// Docker / journald without delay.
 ///
-/// Вызовы синхронные, без буферизации — сообщение попадает в поток
-/// немедленно. std::endl гарантирует flush после каждого вызова,
-/// что важно при редиректе лога в файл или систему сбора логов
-/// (Docker, journald).
-///
-/// info и warn пишут в stdout, error — в stderr, чтобы разделить
-/// обычные сообщения и ошибки при анализе логов внешними системами.
-///
-/// Thread-safety: да — внутренний std::mutex защищает вывод.
+/// Thread-safety: yes — a mutex serialises the output.
 class ConsoleLogger final : public ILogger {
 public:
     void info(std::string_view msg) override;
@@ -27,5 +19,5 @@ public:
     void error(std::string_view msg) override;
 
 private:
-    static std::mutex mtx_;
+    std::mutex mutex_;
 };

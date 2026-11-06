@@ -10,7 +10,7 @@ using asio::ip::udp;
 ///
 /// This is a pure relay — no inspection or modification of packet contents.
 ///
-/// Thread-safety: NOT required — called from the io_context thread only.
+/// Thread-safety: NOT required — called on the transport strand only.
 struct IRelayHandler {
     virtual ~IRelayHandler() = default;
 

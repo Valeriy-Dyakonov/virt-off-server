@@ -18,4 +18,4 @@ COPY --from=builder /src/build/virt-off-server /usr/local/bin/virt-off-server
 EXPOSE 7777/udp
 
 ENTRYPOINT ["virt-off-server"]
-CMD ["7777"]
+CMD ["--api", "v2", "--port", "7777"]

@@ -3,7 +3,7 @@
 
 #include <asio/io_context.hpp>
 #include <asio/signal_set.hpp>
-#include <memory>
+#include <csignal>
 #include <thread>
 #include <vector>
 
@@ -11,28 +11,22 @@ int main(int argc, char* argv[]) {
     const CliParser parser;
     const CliOptions opts = parser.parse(argc, argv);
 
-    auto io_ctx = std::make_unique<asio::io_context>();
-    auto* io_ctx_ptr = io_ctx.get();
+    asio::io_context io_ctx;
+    ServerFactory factory(io_ctx, opts.port);
+    const auto server = factory.create(opts.api);
 
-    ServerFactory factory(*io_ctx_ptr, opts.port);
-    auto server = factory.create(opts.api);
-
-    asio::signal_set signals(*io_ctx_ptr, SIGINT, SIGTERM);
-    signals.async_wait([&](auto, auto) {
+    asio::signal_set signals(io_ctx, SIGINT, SIGTERM);
+    signals.async_wait([&server, &io_ctx](const std::error_code&, int) {
         server->Stop();
-        io_ctx_ptr->stop();
+        io_ctx.stop();
     });
 
     server->Start();
 
-    std::vector<std::thread> workers;
+    std::vector<std::jthread> workers;
     workers.reserve(opts.threads);
     for (unsigned i = 0; i < opts.threads; ++i) {
-        workers.emplace_back([io_ctx_ptr] { io_ctx_ptr->run(); });
+        workers.emplace_back([&io_ctx] { io_ctx.run(); });
     }
-    for (auto& t : workers) {
-        t.join();
-    }
-
     return 0;
 }
