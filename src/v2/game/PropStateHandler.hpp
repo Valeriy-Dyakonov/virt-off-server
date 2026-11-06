@@ -5,6 +5,7 @@
 #include "v2/game/IBroadcastHandler.hpp"
 #include "v2/game/IPropRepository.hpp"
 #include "v2/clients/IUserRepository.hpp"
+#include "v2/handlers/ISenderStamp.hpp"
 #include "core/ConsoleLogger.hpp"
 
 namespace v2::game {
@@ -16,7 +17,8 @@ class PropStateHandler final : public IPropStateHandler {
 public:
     PropStateHandler(IUserRepository& users,
                      IPropRepository& props,
-                     IBroadcastHandler& broadcast);
+                     IBroadcastHandler& broadcast,
+                     const ISenderStamp& stamp);
 
     void handle(const udp::endpoint& from, std::span<const uint8_t> payload) override;
 
@@ -26,6 +28,7 @@ private:
     IPropRepository& props_;
 
     IBroadcastHandler& broadcast_;
+    const ISenderStamp& stamp_;
 
     static inline ILogger* logger_ = new ConsoleLogger();
 };

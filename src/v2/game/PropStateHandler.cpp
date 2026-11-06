@@ -2,6 +2,7 @@
 #include "v2/game/WireSizes.hpp"
 #include "net/ProtocolConstants.hpp"
 
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -9,8 +10,9 @@ namespace v2::game {
 
 PropStateHandler::PropStateHandler(IUserRepository& users,
                                    IPropRepository& props,
-                                   IBroadcastHandler& broadcast)
-    : users_(users), props_(props), broadcast_(broadcast) {}
+                                   IBroadcastHandler& broadcast,
+                                   const ISenderStamp& stamp)
+    : users_(users), props_(props), broadcast_(broadcast), stamp_(stamp) {}
 
 void PropStateHandler::handle(const udp::endpoint& from, std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
@@ -40,8 +42,21 @@ void PropStateHandler::handle(const udp::endpoint& from, std::span<const uint8_t
         return;
     }
 
+    // Remember where the prop is: pickups are validated against it.
+    const size_t pos_off = kStrLenBytes + id_len + kU32Bytes;
+    if (payload.size() >= pos_off + kVec3Bytes) {
+        std::array<float, 3> position{};
+        std::memcpy(position.data(), payload.data() + pos_off, kVec3Bytes);
+        props_.update_position(prop_id, position);
+    }
+
+    const auto stamped = stamp_.stamp(payload, *sender_id);
+    if (!stamped.has_value()) {
+        return;
+    }
+
     // Broadcast to all including author.
-    broadcast_.broadcast(protocol::MSG_PROP_STATE, payload);
+    broadcast_.broadcast(protocol::MSG_PROP_STATE, *stamped);
 }
 
 }  // namespace v2::game

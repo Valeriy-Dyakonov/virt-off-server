@@ -10,8 +10,9 @@ namespace v2::game {
 
 AttackHandler::AttackHandler(IUserRepository& users,
                              IAttackGate& gate,
-                             IBroadcastHandler& broadcast)
-    : users_(users), gate_(gate), broadcast_(broadcast) {}
+                             IBroadcastHandler& broadcast,
+                             const ISenderStamp& stamp)
+    : users_(users), gate_(gate), broadcast_(broadcast), stamp_(stamp) {}
 
 void AttackHandler::handle(const udp::endpoint& from, std::span<const uint8_t> payload) {
     const auto sender_id = users_.find_id_by_endpoint(from);
@@ -45,8 +46,13 @@ void AttackHandler::handle(const udp::endpoint& from, std::span<const uint8_t> p
 
     logger_->info("[Attack] from=" + *sender_id + " target=" + target_id);
 
-    // Relay the original payload to all (including author for feedback).
-    broadcast_.broadcast(protocol::MSG_ATTACK, payload);
+    const auto stamped = stamp_.stamp(payload, *sender_id);
+    if (!stamped.has_value()) {
+        return;
+    }
+
+    // Relay to all (including author for feedback), attacker id taken from the endpoint.
+    broadcast_.broadcast(protocol::MSG_ATTACK, *stamped);
 }
 
 }  // namespace v2::game

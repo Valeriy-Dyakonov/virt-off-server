@@ -7,7 +7,10 @@
 # Starts a real v2 server, connects a listener and a sender, and asserts that:
 #   - both clients get a "player-..." id assigned;
 #   - the listener receives the sender's relayed voice packet;
-#   - the sender does NOT receive its own relayed packet.
+#   - the relayed packet carries the sender's real id, not the one it claimed;
+#   - the sender does NOT receive its own relayed packet;
+#   - the listener is told PLAYER_LEFT after the sender disconnects;
+#   - an attack between two players with known positions reaches the target.
 #
 # No framework: plain checks, non-zero exit on failure so CTest can report it.
 set -u
@@ -17,7 +20,8 @@ CLIENT_BIN="${2:?usage: integration_test.sh <server-binary> <test-client-binary>
 
 readonly PORT=39221
 readonly ID_PREFIX="CONNECTED player-"
-readonly VOICE_LINE="RECV VOICE hello-voice"
+readonly VOICE_PAYLOAD="hello-voice"
+readonly SPOOFED_ID="spoofed-id"
 
 FAILURES=0
 WORK_DIR="$(mktemp -d)"
@@ -65,20 +69,29 @@ check_absent() {
 SERVER_PID=$!
 sleep 1
 
-"$CLIENT_BIN" --port "$PORT" --payload hello-voice --listen 4 >"$WORK_DIR/listener.log" 2>&1 &
+"$CLIENT_BIN" --port "$PORT" --position --listen 6 >"$WORK_DIR/listener.log" 2>&1 &
 LISTENER_PID=$!
 sleep 1
 
-"$CLIENT_BIN" --port "$PORT" --send voice --payload hello-voice --listen 2 >"$WORK_DIR/sender.log" 2>&1 &
+LISTENER_ID="$(grep -m1 "^CONNECTED " "$WORK_DIR/listener.log" | cut -d' ' -f2)"
+
+"$CLIENT_BIN" --port "$PORT" --send voice --payload "$VOICE_PAYLOAD" --claim "$SPOOFED_ID" \
+    --attack "$LISTENER_ID" --listen 2 --disconnect \
+    >"$WORK_DIR/sender.log" 2>&1 &
 SENDER_PID=$!
 
 wait "$LISTENER_PID"
 wait "$SENDER_PID"
 
+SENDER_ID="$(grep -m1 "^CONNECTED " "$WORK_DIR/sender.log" | cut -d' ' -f2)"
+
 check_contains "$WORK_DIR/listener.log" "$ID_PREFIX" "listener: assigned id"
-check_contains "$WORK_DIR/listener.log" "$VOICE_LINE" "listener: received relayed voice"
 check_contains "$WORK_DIR/sender.log" "$ID_PREFIX" "sender: assigned id"
-check_absent "$WORK_DIR/sender.log" "$VOICE_LINE" "sender: did not receive its own voice"
+check_contains "$WORK_DIR/listener.log" "RECV VOICE $SENDER_ID $VOICE_PAYLOAD" "listener: received voice with the real sender id"
+check_absent "$WORK_DIR/listener.log" "$SPOOFED_ID" "listener: claimed sender id was replaced"
+check_absent "$WORK_DIR/sender.log" "RECV VOICE" "sender: did not receive its own voice"
+check_contains "$WORK_DIR/listener.log" "RECV PLAYER_LEFT $SENDER_ID" "listener: told that the sender left"
+check_contains "$WORK_DIR/listener.log" "RECV ATTACK $SENDER_ID $LISTENER_ID" "listener: received the attack"
 
 if [ "$FAILURES" -eq 0 ]; then
     echo "ALL INTEGRATION TESTS PASSED"

@@ -16,13 +16,14 @@ namespace v2::game {
 /// Thread-safety: NOT required — accessed only on the transport strand.
 class PropRepository final : public IPropRepository {
 public:
-    void register_manifest(const std::vector<PropDescriptor>& descriptors) override;
+    std::vector<uint32_t> register_manifest(const std::vector<PropDescriptor>& descriptors) override;
 
     bool try_grant(uint32_t prop_id, const std::string& holder_id) override;
 
     std::optional<PropRecord> release(uint32_t prop_id) override;
 
-    void release_all_of(const std::string& owner_id) override;
+    std::vector<uint32_t> release_all_of(const std::string& owner_id) override;
+    void update_position(uint32_t prop_id, const std::array<float, 3>& position) override;
 
     std::optional<PropRecord> get(uint32_t prop_id) const override;
 

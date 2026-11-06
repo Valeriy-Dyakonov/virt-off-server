@@ -17,9 +17,8 @@ struct ISessionMonitor {
     /// Updates the last-seen timestamp for `id` to now.
     virtual void mark_active(const std::string& id) = 0;
 
-    /// Finds and drops sessions idle longer than kSessionTimeout.
-    /// Calls IUserRepository::remove_idle + IPropRepository::release_all_of
-    /// + IBroadcastHandler::broadcast for each dropped session.
+    /// Finds sessions idle longer than kSessionTimeout and ends each of them
+    /// through ISessionTerminator.
     virtual void sweep(std::chrono::system_clock::time_point now) = 0;
 };
 

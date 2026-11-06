@@ -4,6 +4,7 @@
 #include "v2/game/GameConstants.hpp"
 #include "v2/game/WireSizes.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <span>
@@ -21,6 +22,7 @@ Server::Server(ServerDependencies deps, uint16_t port)
     , router_(std::move(deps.router))
     , connect_handler_(std::move(deps.connect_handler))
     , relay_handler_(std::move(deps.relay_handler))
+    , sender_stamp_(std::move(deps.sender_stamp))
     , game_orchestrator_(std::move(deps.game_orchestrator))
     , port_(port) {
     logger_->info("Server (v2) object created, port=" + std::to_string(port_));
@@ -91,20 +93,7 @@ void Server::Start() {
                                       return;
                                   }
                                   logger_->info("[Server] DISCONNECT " + *sender_id);
-                                  // Graceful disconnect: release props and remove user.
-                                  game_orchestrator_->prop_repository().release_all_of(*sender_id);
-                                  game_orchestrator_->prop_repository().for_each(
-                                      [this](const game::PropRecord& rec) {
-                                          if (rec.owner_id.empty()) {
-                                              const size_t payload_size = game::kU32Bytes + game::kStrLenBytes + game::kVec3Bytes + game::kVec3Bytes + game::kFlagsBytes;
-                                              std::vector<uint8_t> payload(payload_size, 0);
-                                              std::memcpy(payload.data(), &rec.prop_id, game::kU32Bytes);
-                                              payload.back() = game::kPropFlagSettled;
-                                              game_orchestrator_->broadcast_handler().broadcast(
-                                                  protocol::MSG_PROP_RELEASE_EVENT, payload);
-                                          }
-                                      });
-                                  user_repository_->remove(*sender_id);
+                                  game_orchestrator_->session_terminator().terminate(*sender_id);
                               });
 
     // Receive wrapper: mark_active + player_state update for POSITION.
@@ -115,17 +104,13 @@ void Server::Start() {
                 if (sender_id.has_value()) {
                     game_orchestrator_->session_monitor().mark_active(*sender_id);
 
-                    // For POSITION packets, update player state before routing.
-                    // POSITION payload: [id:str][pos:12][rot:16][vel:12]
+                    // For POSITION packets, update player state before routing:
+                    // attacks and pickups are validated against it.
                     if (data[0] == protocol::MSG_POSITION) {
-                        const uint8_t id_len = data[1];
-                        constexpr size_t pos_payload_min = game::kStrLenBytes + game::kVec3Bytes + game::kQuatBytes + game::kVec3Bytes;
-                        if (data.size() >= 1 + game::kStrLenBytes + id_len + pos_payload_min) {
-                            const size_t pos_off = 1 + game::kStrLenBytes + id_len;
+                        const auto payload = std::span<const uint8_t>(data).subspan(1);
+                        if (const auto position = game_orchestrator_->position_reader().read(payload)) {
                             game::PlayerTransform transform;
-                            std::memcpy(transform.position,  data.data() + pos_off,                              game::kVec3Bytes);
-                            std::memcpy(transform.rotation,  data.data() + pos_off + game::kVec3Bytes,           game::kQuatBytes);
-                            std::memcpy(transform.velocity,  data.data() + pos_off + game::kVec3Bytes + game::kQuatBytes, game::kVec3Bytes);
+                            std::copy(position->begin(), position->end(), transform.position);
                             game_orchestrator_->player_state().update(*sender_id, transform);
                         }
                     }
